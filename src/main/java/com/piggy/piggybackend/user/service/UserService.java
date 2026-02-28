@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -206,5 +207,22 @@ public class UserService {
 
         passwordResetTokenRepository.delete(resetToken);
     }
+    @Transactional
+    public void updateAdditionalInfo(String email, AdditionalInfoRequest request) {
+        // 1. 이메일로 유저 조회
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
+        // 2. 정보 업데이트 (더미 데이터를 실제 데이터로 교체)
+        user.updateSocialInfo(
+                request.getNickname(),
+                LocalDate.parse(request.getBirth()), // YYYY-MM-DD 포맷
+                request.getPhoneNum()
+        );
+
+        // 3. (선택) 만약 ROLE_GUEST 권한을 썼다면 여기서 ROLE_USER로 변경
+        // user.updateRole(Role.USER);
+
+        userRepository.save(user);
+    }
 }

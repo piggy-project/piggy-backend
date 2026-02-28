@@ -47,6 +47,11 @@ public class User {
     @Column(nullable = true)
     private String providerId; // 소셜 고유 ID
 
+    public void updateSocialInfo(String nickname, LocalDate birth, String phoneNum) {
+        this.nickname = nickname;
+        this.birth = birth;
+        this.phoneNum = phoneNum;
+    }
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }

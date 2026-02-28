@@ -29,7 +29,6 @@ public class CustomOAuth2UserService
     @Transactional
     @Override
     public OAuth2User loadUser(OAuth2UserRequest request) {
-        log.info("📢 OAuth2 로그인 시도 시작! (Client: {})", request.getClientRegistration().getRegistrationId()); // 👈 맨 위에 추가
         OAuth2User oAuth2User = super.loadUser(request);
 
         // 1. yml에 설정한 id, response, sub 같은 키값을 가져옴
@@ -62,7 +61,6 @@ public class CustomOAuth2UserService
     }
 
     private User registerUser(Provider provider, OAuth2UserInfo userInfo) {
-        log.info("🚀 신규 소셜 유저 저장 시도: {}, {}", userInfo.getEmail(), provider);
         User savedUser = userRepository.save(User.builder()
                 .provider(provider)
                 .providerId(userInfo.getProviderId())
@@ -82,7 +80,6 @@ public class CustomOAuth2UserService
                 .phoneNum("010-0000-0000")
 
                 .build());
-        log.info("✅ 저장 완료된 유저 ID: {}", savedUser.getId());
         return savedUser;
     }
 

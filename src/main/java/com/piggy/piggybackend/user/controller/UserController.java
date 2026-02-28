@@ -78,4 +78,14 @@ public class UserController {
         userService.resetPassword(dto.getToken(), dto.getNewPassword());
         return ResponseEntity.ok("비밀번호 변경 완료");
     }
+    // 소셜 로그인 추가 정보 업데이트
+    @PatchMapping("/additional-info")
+    public ApiResponse<String> updateAdditionalInfo(
+            @AuthenticationPrincipal String email, // 👈 토큰에서 이메일 추출
+            @RequestBody AdditionalInfoRequest request) {
+
+        userService.updateAdditionalInfo(email, request);
+
+        return ApiResponse.success("추가 정보 입력이 완료되었습니다.");
+    }
 }
