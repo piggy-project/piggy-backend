@@ -84,7 +84,7 @@ public class ComparisonService {
     public void refreshPopularItemsCache() {
         log.info("인기 아이템 캐시 갱신 시작");
         try {
-            List<String> topKeywords = rankingService.getTopKeywords(3);
+            List<String> topKeywords = rankingService.getTopKeywords(6);
 
             // 환율 정보가 없으면 작업 중단
             var jpyDetail = exchangeRateService.getExchangeDetail("JPY");
