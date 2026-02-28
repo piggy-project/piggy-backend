@@ -39,8 +39,6 @@ public class RakutenService {
                 .build()
                 .toUri();
 
-        log.info("라쿠텐 요청 URI: {}", uri);
-
         return restTemplate.getForObject(uri, RakutenItemDto.class);
     }
 }
