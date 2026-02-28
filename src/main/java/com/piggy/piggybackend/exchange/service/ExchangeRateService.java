@@ -70,33 +70,41 @@ public class ExchangeRateService {
             HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-            if (response.statusCode() == 200) {
-                Map<String, Object> body = objectMapper.readValue(response.body(), Map.class);
-                Map<String, Object> responseMap = (Map<String, Object>) body.get("response");
-                Map<String, Object> rates = (Map<String, Object>) responseMap.get("rates");
-
-                Double krwInBase = Double.parseDouble(String.valueOf(rates.get("KRW")));
-
-                currencyMap.keySet().forEach(code -> {
-                    Object rateValue = rates.get(code);
-                    if (rateValue != null) {
-                        Double rateInBase = Double.parseDouble(String.valueOf(rateValue));
-                        Double krwRate = krwInBase / rateInBase;
-                        if ("JPY".equals(code)) krwRate *= 100;
-
-                        double roundedRate = Math.round(krwRate * 100) / 100.0;
-                        // Redis Hash에 실시간 환율 저장
-                        redisTemplate.opsForHash().put(REDIS_LIVE_RATES, code, String.valueOf(roundedRate));
-                        updateHighLowInRedis(code, roundedRate);
-                    }
-                });
-
-                String nowTime = LocalTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("HH:mm"));
-                redisTemplate.opsForValue().set(REDIS_UPDATE_TIME, nowTime);
-                log.info("Redis 환율 업데이트 완료: {}", nowTime);
+            if (response.statusCode() != 200) {
+                log.error("외부 환율 API 에러: HTTP Status {}", response.statusCode());
+                return; // 스케줄러이므로 예외를 던지기보다 로그를 남기고 종료
             }
+            Map<String, Object> body = objectMapper.readValue(response.body(), Map.class);
+            Map<String, Object> responseMap = (Map<String, Object>) body.get("response");
+
+            if (responseMap == null || !responseMap.containsKey("rates")) {
+                log.error("외부 환율 API 응답 구조가 올바르지 않습니다.");
+                return;
+            }
+
+            Map<String, Object> rates = (Map<String, Object>) responseMap.get("rates");
+            Double krwInBase = Double.parseDouble(String.valueOf(rates.get("KRW")));
+
+            currencyMap.keySet().forEach(code -> {
+                Object rateValue = rates.get(code);
+                if (rateValue != null) {
+                    Double rateInBase = Double.parseDouble(String.valueOf(rateValue));
+                    Double krwRate = krwInBase / rateInBase;
+                    if ("JPY".equals(code)) krwRate *= 100;
+
+                    double roundedRate = Math.round(krwRate * 100) / 100.0;
+                    // Redis Hash에 실시간 환율 저장
+                    redisTemplate.opsForHash().put(REDIS_LIVE_RATES, code, String.valueOf(roundedRate));
+                    updateHighLowInRedis(code, roundedRate);
+                }
+            });
+
+            String nowTime = LocalTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("HH:mm"));
+            redisTemplate.opsForValue().set(REDIS_UPDATE_TIME, nowTime);
+            log.info("Redis 환율 업데이트 완료: {}", nowTime);
+
         } catch (Exception e) {
-            log.error("Redis 환율 갱신 실패: {}", e.getMessage());
+            log.error("Redis 환율 갱신 중 예외 발생: {}", e.getMessage());
         }
     }
 
@@ -108,7 +116,8 @@ public class ExchangeRateService {
         double lastHigh = highObj != null ? Double.parseDouble(highObj.toString()) : currentRate;
         double lastLow = lowObj != null ? Double.parseDouble(lowObj.toString()) : currentRate;
 
-        if (currentRate >= lastHigh) redisTemplate.opsForHash().put(REDIS_HIGH_RATES, code, String.valueOf(currentRate));
+        if (currentRate >= lastHigh)
+            redisTemplate.opsForHash().put(REDIS_HIGH_RATES, code, String.valueOf(currentRate));
         if (currentRate <= lastLow) redisTemplate.opsForHash().put(REDIS_LOW_RATES, code, String.valueOf(currentRate));
     }
 
@@ -151,9 +160,16 @@ public class ExchangeRateService {
     // 2. 전체 환율 조회 (Redis 기반)
     public List<ExchangeRateResponseDto> getLatestRates() {
         Map<Object, Object> rates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
+
+        // 캐시가 비어있으면 즉시 갱신 시도
         if (rates.isEmpty()) {
             updateLiveRatesCache();
             rates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
+        }
+
+        // 갱신 후에도 비어있다면 외부 API 서버 혹은 Redis 문제
+        if (rates.isEmpty()) {
+            throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
         }
 
         String today = LocalDate.now(ZoneId.of("Asia/Seoul")).toString();
@@ -173,10 +189,19 @@ public class ExchangeRateService {
     // 3. 상세 환율 조회 (Redis 기반)
     @Transactional(readOnly = true)
     public ExchangeDetailResponseDto getExchangeDetail(String code) {
+        // 지원하지 않는 통화 코드 요청 시 에러 처리
+        if (!currencyMap.containsKey(code)) {
+            throw new CustomException(ErrorCode.GRAPH_NOT_SUPPORTED);
+        }
+
         Object rateObj = redisTemplate.opsForHash().get(REDIS_LIVE_RATES, code);
         if (rateObj == null) {
             updateLiveRatesCache();
             rateObj = redisTemplate.opsForHash().get(REDIS_LIVE_RATES, code);
+        }
+        // 여전히 데이터가 없으면 데이터 부재 에러
+        if (rateObj == null) {
+            throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
         }
 
         double currentRate = rateObj != null ? Double.parseDouble(rateObj.toString()) : 0.0;
@@ -189,8 +214,10 @@ public class ExchangeRateService {
         double percentChange = 0.0;
         if (yesterdayOpt.isPresent()) {
             double yesterdayRate = yesterdayOpt.get().getDealBasR();
-            change = currentRate - yesterdayRate;
-            percentChange = (change / yesterdayRate) * 100;
+            if (yesterdayRate > 0) {
+                change = currentRate - yesterdayRate;
+                percentChange = (change / yesterdayRate) * 100;
+            }
         }
 
         Object high = redisTemplate.opsForHash().get(REDIS_HIGH_RATES, code);

@@ -3,6 +3,8 @@ package com.piggy.piggybackend.shopping.util.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.piggy.piggybackend.exchange.service.ExchangeRateService;
+import com.piggy.piggybackend.global.exception.CustomException;
+import com.piggy.piggybackend.global.exception.ErrorCode;
 import com.piggy.piggybackend.global.redis.service.SearchRankingService;
 import com.piggy.piggybackend.shopping.util.dto.ComparisonResponse;
 import com.piggy.piggybackend.shopping.util.dto.RakutenItemDto;
@@ -36,62 +38,90 @@ public class ComparisonService {
         try {
             rankingService.incrementKeywordCount(query);
 
-            // 1. 각 쇼핑몰 API 데이터 호출
+            // 1. API 호출 (실패 시 서비스 내부에서 예외를 던지거나 null 반환 가정)
             var naverResult = naverService.searchItems(query);
             var rakutenResult = rakutenService.searchItems(query);
 
-            // 2. Redis에서 실시간 JPY 환율 가져오기
+            // 2. 환율 데이터 확인 (앱의 핵심 데이터이므로 없으면 에러)
             var jpyDetail = exchangeRateService.getExchangeDetail("JPY");
+            if (jpyDetail == null) {
+                throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
+            }
             double exchangeRate = jpyDetail.getCurrentRate();
 
-            // 3. 최종 응답 객체 생성
             return ComparisonResponse.builder()
                     .naverResults(naverResult)
                     .rakutenResults(rakutenResult)
                     .exchangeRate(exchangeRate)
                     .build();
+        } catch (CustomException e) {
+            throw e; // 이미 정의된 예외는 그대로 전달
         } catch (Exception e) {
-            log.error("검색 중 에러 발생: ", e); // 에러 로그 추가
-            throw e;
+            log.error("검색 중 예상치 못한 에러: ", e);
+            throw new CustomException(ErrorCode.SHOPPING_API_ERROR);
         }
     }
 
-    // 인기 키워드 기반 추천 아이템 가져오기
+    // 인기 아이템 리스트 (캐시 읽기)
     public List<UnifiedItemDto> getPopularItems() {
-        List<UnifiedItemDto> cached = getCachedItems(CACHE_KEY);
-        if (cached == null || cached.isEmpty()) {
-            refreshPopularItemsCache(); // 캐시 없으면 즉시 생성
-            return getCachedItems(CACHE_KEY);
+        try {
+            List<UnifiedItemDto> cached = getCachedItems(CACHE_KEY);
+            if (cached == null || cached.isEmpty()) {
+                refreshPopularItemsCache();
+                cached = getCachedItems(CACHE_KEY);
+            }
+
+            if (cached == null || cached.isEmpty()) {
+                throw new CustomException(ErrorCode.EMPTY_SEARCH_RESULT);
+            }
+            return cached;
+        } catch (Exception e) {
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
-        return cached;
     }
     // 2. 매시 정각/30분마다 자동 갱신
     @Scheduled(cron = "0 0,30 * * * *")
     public void refreshPopularItemsCache() {
-        List<String> topKeywords = rankingService.getTopKeywords(3);
-        double jpyRate = exchangeRateService.getExchangeDetail("JPY").getCurrentRate();
+        log.info("인기 아이템 캐시 갱신 시작");
+        try {
+            List<String> topKeywords = rankingService.getTopKeywords(3);
 
-        List<UnifiedItemDto> items = topKeywords.stream().map(keyword -> {
-            try {
-                Thread.sleep(1000); // 1초 간격으로 라쿠텐 API 호출 (Rate Limit 방어)
-                var result = rakutenService.searchItems(keyword);
-                if (result == null || result.getItems().isEmpty()) return null;
-
-                var item = result.getItems().get(0).getItem();
-                return UnifiedItemDto.builder()
-                        .id(item.getItemUrl())
-                        .name(item.getItemName())
-                        .price(item.getItemPrice())
-                        .imageUrl(item.getMediumImageUrls().get(0).getImageUrl())
-                        .source("RAKUTEN")
-                        .exchangeRate(jpyRate)
-                        .build();
-            } catch (Exception e) {
-                return null;
+            // 환율 정보가 없으면 작업 중단
+            var jpyDetail = exchangeRateService.getExchangeDetail("JPY");
+            if (jpyDetail == null) {
+                log.error("캐시 갱신 실패: 환율 데이터를 찾을 수 없습니다.");
+                return;
             }
-        }).filter(Objects::nonNull).collect(Collectors.toList());
+            double jpyRate = jpyDetail.getCurrentRate();
 
-        if (!items.isEmpty()) saveToCache(CACHE_KEY, items, 35);
+            List<UnifiedItemDto> items = topKeywords.stream().map(keyword -> {
+                try {
+                    Thread.sleep(1000);
+                    var result = rakutenService.searchItems(keyword);
+                    if (result == null || result.getItems().isEmpty()) return null;
+
+                    var item = result.getItems().get(0).getItem();
+                    return UnifiedItemDto.builder()
+                            .id(item.getItemUrl())
+                            .name(item.getItemName())
+                            .price(item.getItemPrice())
+                            .imageUrl(item.getMediumImageUrls().get(0).getImageUrl())
+                            .source("RAKUTEN")
+                            .exchangeRate(jpyRate)
+                            .build();
+                } catch (Exception e) {
+                    log.warn("키워드 [{}] 검색 실패: {}", keyword, e.getMessage());
+                    return null;
+                }
+            }).filter(Objects::nonNull).collect(Collectors.toList());
+
+            if (!items.isEmpty()) {
+                saveToCache(CACHE_KEY, items, 35);
+                log.info("캐시 갱신 완료 (총 {}개 아이템)", items.size());
+            }
+        } catch (Exception e) {
+            log.error("스케줄러 실행 중 심각한 에러: ", e);
+        }
     }
 
     // --- Redis 캐시 헬퍼 메서드 ---

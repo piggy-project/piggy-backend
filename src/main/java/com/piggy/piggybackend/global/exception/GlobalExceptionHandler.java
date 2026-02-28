@@ -52,5 +52,4 @@ public class GlobalExceptionHandler {
                         .message(e.getMessage())   // 👈 실제 메시지 보기
                         .build());
     }
-
 }
