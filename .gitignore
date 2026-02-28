@@ -1,0 +1,65 @@
+HELP.md
+.gradle
+build/
+out/
+target/
+
+### STS / Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+### OS ###
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+### Build Artifacts ###
+*.jar
+*.war
+*.zip
+*.tar.gz
+*.log
+
+### Secrets (진짜 비밀번호 파일만 가리기) ###
+# Dockerfile은 배포에 필수이므로 지우면 안됨!
+# docker-compose.yml도 보통 구조만 있고 비밀번호는 환경변수로 빼므로 올리는 게 좋음.
+docker-compose.yml
+
+# 실제 비밀번호가 들어있는 설정 파일들 (예시)
+src/main/resources/application-secret.yml
+src/main/resources/application-prod.yml
+.env
+
+### Gradle Wrapper (이건 꼭 올라가야 함) ###
+!gradle/wrapper/gradle-wrapper.jar
+!gradlew
+!gradlew.bat
+
+# Redis 데이터 무시
+redis/data/
+
+# Database backup files
+*.sql
+backup.sql
