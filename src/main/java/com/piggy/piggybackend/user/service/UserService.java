@@ -225,4 +225,16 @@ public class UserService {
 
         userRepository.save(user);
     }
+    @Transactional
+    public void deleteUnfinishedUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 추가 정보를 아직 입력하지 않은(1900년생 더미인) 경우에만 삭제 가능하도록 설정
+        if (user.getBirth().equals(java.time.LocalDate.of(1900, 1, 1))) {
+            userRepository.delete(user);
+        } else {
+            throw new CustomException(ErrorCode.INVALID_REQUEST); // 이미 가입 완료된 유저는 삭제 불가
+        }
+    }
 }

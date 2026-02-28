@@ -12,6 +12,7 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "InternalServerError", "서버에 문제가 발생했습니다."),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "InvalidCredentials", "이메일 또는 비밀번호가 올바르지 않습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", "존재하지 않는 사용자입니다."),
+    INVALID_REQUEST(HttpStatus.NOT_FOUND, "INVALID_REQUEST", "이미 가입된 사용자입니다."),
     // 환율 관련 에러 코드
     GRAPH_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "ExchangeGraphNotSupported", "환율 그래프를 지원하지 않습니다."),
     EXCHANGE_DATA_NOT_FOUND(HttpStatus.NOT_FOUND, "ExchangeDataNotFound", "환율 데이터를 찾을 수 없습니다."),

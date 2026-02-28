@@ -88,4 +88,11 @@ public class UserController {
 
         return ApiResponse.success("추가 정보 입력이 완료되었습니다.");
     }
+    // UserController.java
+
+    @DeleteMapping("/social-cancel")
+    public ApiResponse<String> cancelSocialSignup(@AuthenticationPrincipal String email) {
+        userService.deleteUnfinishedUser(email);
+        return ApiResponse.success("소셜 가입이 취소되고 데이터가 삭제되었습니다.");
+    }
 }
