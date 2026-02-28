@@ -1,6 +1,7 @@
 package com.piggy.piggybackend.auth.service;
 
 import com.piggy.piggybackend.global.util.JwtUtil;
+import com.piggy.piggybackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -18,6 +19,7 @@ import java.util.Map;
 public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @Override
     public void onAuthenticationSuccess(
@@ -29,50 +31,53 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         Map<String, Object> attributes = oAuth2User.getAttributes();
 
-        String email = null;
-
-        // [기존 로직] 제공자별 이메일 파싱
-        if (attributes.containsKey("kakao_account")) {
-            Map<String, Object> kakaoAccount = (Map<String, Object>) attributes.get("kakao_account");
-            email = (String) kakaoAccount.get("email");
-        } else if (attributes.containsKey("response")) {
-            Map<String, Object> naverResponse = (Map<String, Object>) attributes.get("response");
-            email = (String) naverResponse.get("email");
-        } else {
-            email = (String) attributes.get("email");
-        }
+        String email = getEmailFromAttributes(attributes); // 이메일 파싱 로직 분리(깔끔하게)
 
         if (email == null) {
             email = oAuth2User.getName();
         }
+        boolean isNewUser = userRepository.findByEmail(email)
+                .map(user -> user.getBirth().equals(java.time.LocalDate.of(1900, 1, 1))) // 유빈님이 설정한 더미 날짜 체크
+                .orElse(false);
 
         String accessToken = jwtUtil.generateAccessToken(email);
         String refreshToken = jwtUtil.generateRefreshToken(email);
 
-        // 1. 세션이나 파라미터에서 target 확인 (유실될 가능성 높음)
         String target = request.getParameter("target");
         if (target == null) {
             target = (String) request.getSession().getAttribute("target");
         }
 
-        // 2. User-Agent 확인 (기기 정보)
         String userAgent = request.getHeader("User-Agent");
-
         String targetUrl;
 
-        // 💡 [수정된 분기 로직]
-        // target이 직접 "app"으로 왔거나,
-        // 정보가 없는데 기기가 모바일(Mobi 포함)이라면 앱으로 리다이렉트
-        if ("app".equals(target) || (target == null && userAgent != null && userAgent.toLowerCase().contains("mobi"))) {
-            // 📱 엑스포(앱)용 리다이렉트
-            targetUrl = "exp://localhost:8081/--/oauth/success?token=" + accessToken + "&refreshToken=" + refreshToken;
-            System.out.println("Redirecting to App: " + targetUrl);
+        // 앱웹 여부 판단
+        boolean isApp = "app".equals(target) || (target == null && userAgent != null && userAgent.toLowerCase().contains("mobi"));
+
+        // 경로 결정 (추가 정보 입력 여부에 따른 분기)
+        String path = isNewUser ? "additional-info" : "success";
+
+        if (isApp) {
+            // 엑스포 앱용 (경로에 path 변수 삽입)
+            targetUrl = String.format("exp://localhost:8081/--/oauth/%s?token=%s&refreshToken=%s",
+                    path, accessToken, refreshToken);
         } else {
-            // 🌐 웹용 리다이렉트 (PC 브라우저 등)
-            targetUrl = "https://piggys.mooo.com/oauth/success?token=" + accessToken + "&refreshToken=" + refreshToken;
-            System.out.println("Redirecting to Web: " + targetUrl);
+            // 웹용
+            targetUrl = String.format("https://piggys.mooo.com/oauth/%s?token=%s&refreshToken=%s",
+                    path, accessToken, refreshToken);
         }
 
+        System.out.println("Redirecting to (" + path + "): " + targetUrl);
         response.sendRedirect(targetUrl);
+    }
+
+    // 이메일 추출 로직 (가독성을 위해 메서드 추출)
+    private String getEmailFromAttributes(Map<String, Object> attributes) {
+        if (attributes.containsKey("kakao_account")) {
+            return (String) ((Map<String, Object>) attributes.get("kakao_account")).get("email");
+        } else if (attributes.containsKey("response")) {
+            return (String) ((Map<String, Object>) attributes.get("response")).get("email");
+        }
+        return (String) attributes.get("email");
     }
 }

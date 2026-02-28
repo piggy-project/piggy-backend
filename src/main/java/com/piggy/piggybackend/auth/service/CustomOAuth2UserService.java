@@ -5,17 +5,20 @@ import com.piggy.piggybackend.user.entity.Provider;
 import com.piggy.piggybackend.user.entity.User;
 import com.piggy.piggybackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomOAuth2UserService
@@ -23,8 +26,10 @@ public class CustomOAuth2UserService
 
     private final UserRepository userRepository;
 
+    @Transactional
     @Override
     public OAuth2User loadUser(OAuth2UserRequest request) {
+        log.info("📢 OAuth2 로그인 시도 시작! (Client: {})", request.getClientRegistration().getRegistrationId()); // 👈 맨 위에 추가
         OAuth2User oAuth2User = super.loadUser(request);
 
         // 1. yml에 설정한 id, response, sub 같은 키값을 가져옴
@@ -57,7 +62,8 @@ public class CustomOAuth2UserService
     }
 
     private User registerUser(Provider provider, OAuth2UserInfo userInfo) {
-        return userRepository.save(User.builder()
+        log.info("🚀 신규 소셜 유저 저장 시도: {}, {}", userInfo.getEmail(), provider);
+        User savedUser = userRepository.save(User.builder()
                 .provider(provider)
                 .providerId(userInfo.getProviderId())
                 .email(userInfo.getEmail())
@@ -76,6 +82,8 @@ public class CustomOAuth2UserService
                 .phoneNum("010-0000-0000")
 
                 .build());
+        log.info("✅ 저장 완료된 유저 ID: {}", savedUser.getId());
+        return savedUser;
     }
 
     private OAuth2UserInfo getOAuth2UserInfo(
@@ -96,6 +104,6 @@ public class CustomOAuth2UserService
     }
 
     private String generateRandomNickname() {
-        return "user_" + System.currentTimeMillis();
+        return "U" + UUID.randomUUID().toString().substring(0, 6);
     }
 }
