@@ -1,7 +1,11 @@
 spring:
   application:
     name: som-backend
-
+  servlet:
+    multipart:
+      enabled: true            # 멀티파트 기능 활성화
+      max-file-size: 10MB      # 파일 하나당 최대 용량
+      max-request-size: 10MB
   jackson:
     time-zone: Asia/Seoul
 
@@ -123,6 +127,8 @@ api:
 server:
   port: 8080
   forward-headers-strategy: framework
+  tomcat:
+    max-http-form-post-size: 10MB
   servlet:
     session:
       cookie:
