@@ -3,7 +3,7 @@ package com.piggy.piggybackend.shopping.util.controller;
 import com.piggy.piggybackend.global.response.ApiResponse;
 import com.piggy.piggybackend.shopping.util.dto.OcrRequest;
 import com.piggy.piggybackend.shopping.util.dto.OcrResponse;
-import com.piggy.piggybackend.shopping.service.OcrService;
+import com.piggy.piggybackend.shopping.util.service.OcrService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 

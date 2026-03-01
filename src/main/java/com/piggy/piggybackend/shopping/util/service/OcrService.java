@@ -1,4 +1,4 @@
-package com.piggy.piggybackend.shopping.service;
+package com.piggy.piggybackend.shopping.util.service;
 
 import com.google.cloud.vision.v1.*;
 import com.google.protobuf.ByteString;
