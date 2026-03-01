@@ -45,6 +45,7 @@ public class OcrService {
                 .originalText(detectedText.length() > 20 ? detectedText.substring(0, 20) + "..." : detectedText)
                 .jpyAmount(jpyAmount)
                 .krwAmount(krwAmount)
+                .exchangeRate(currentRate)
                 .build();
     }
 
