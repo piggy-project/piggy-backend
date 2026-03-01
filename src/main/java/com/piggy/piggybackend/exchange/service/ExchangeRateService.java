@@ -130,7 +130,7 @@ public class ExchangeRateService {
     }
 
     //Redis 기반으로 마감 환율 저장
-    @Scheduled(cron = "0 10 2 * * MON-SUN")
+    @Scheduled(cron = "0 10 2 * * *")
     @Transactional
     public void saveDailyClosingRates() {
         Map<Object, Object> rates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
