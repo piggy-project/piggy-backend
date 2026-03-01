@@ -18,8 +18,9 @@ public class OcrController {
 
     @PostMapping("/scan")
     public ApiResponse<OcrResponse> scanPrice(@RequestBody OcrRequest request) {
-        // 이미지를 처리하고 결과를 반환
-        OcrResponse response = ocrService.processImage(request.getImage());
+        log.info("OCR 스캔 요청 - 통화: {}", request.getCurrency());
+        // 이미지와 통화 코드를 함께 전달
+        OcrResponse response = ocrService.processImage(request.getImage(), request.getCurrency());
         return ApiResponse.success(response);
     }
 }

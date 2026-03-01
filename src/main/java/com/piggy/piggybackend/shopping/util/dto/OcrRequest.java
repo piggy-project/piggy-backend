@@ -7,5 +7,6 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OcrRequest {
-    private String image; // 프론트에서 보낸 Base64 이미지 데이터
+    private String image;
+    private String currency; // 프론트에서 보낸 'JPY', 'USD' 등
 }
