@@ -76,15 +76,29 @@ public class OcrService {
     }
 
     private double parsePrice(String text) {
-        // 숫자와 쉼표를 찾아내는 정규식 (가격표의 숫자를 타겟팅)
-        Pattern pattern = Pattern.compile("([0-9]{1,3}(,[0-9]{3})*|[0-9]+)");
-        Matcher matcher = pattern.matcher(text);
+        // 1. 엔화 기호나 한자가 붙은 가격 패턴 (예: 7,722円, ¥500)
+        // [0-9,]+ : 숫자와 쉼표 조합
+        // \\s* : 공백 허용
+        Pattern priceWithSymbol = Pattern.compile("([0-9,]+)\\s*(円|¥|YEN)");
+        Matcher symbolMatcher = priceWithSymbol.matcher(text);
+
+        if (symbolMatcher.find()) {
+            try {
+                String val = symbolMatcher.group(1).replace(",", "");
+                return Double.parseDouble(val);
+            } catch (NumberFormatException ignored) {}
+        }
+
+        // 2. 기호가 없을 경우: 텍스트 전체에서 가장 큰 숫자를 후보로 선정
+        Pattern plainNumberPattern = Pattern.compile("([0-9]{1,3}(,[0-9]{3})*|[0-9]+)");
+        Matcher numberMatcher = plainNumberPattern.matcher(text);
 
         double maxFound = 0;
-        while (matcher.find()) {
+        while (numberMatcher.find()) {
             try {
-                String val = matcher.group().replace(",", "");
+                String val = numberMatcher.group().replace(",", "");
                 double num = Double.parseDouble(val);
+                // 너무 작은 숫자(예: 날짜나 수량 1, 2)는 제외하고 큰 숫자를 우선시
                 if (num > maxFound) maxFound = num;
             } catch (NumberFormatException ignored) {}
         }
