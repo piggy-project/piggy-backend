@@ -39,9 +39,10 @@ public class ExchangeRateService {
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     private static final String REDIS_LIVE_RATES = "exchange:live";
+    private static final String REDIS_UPDATE_TIME = "exchange:time";
     private static final String REDIS_HIGH_RATES = "exchange:high";
     private static final String REDIS_LOW_RATES = "exchange:low";
-    private static final String REDIS_UPDATE_TIME = "exchange:time";
+
 
     private static final Map<String, String> currencyMap = Map.ofEntries(
             Map.entry("USD", "미국 달러"), Map.entry("EUR", "유럽연합 유로"),
@@ -129,7 +130,7 @@ public class ExchangeRateService {
     }
 
     //Redis 기반으로 마감 환율 저장
-    @Scheduled(cron = "0 10 2 * * MON-SAT")
+    @Scheduled(cron = "0 10 2 * * MON-SUN")
     @Transactional
     public void saveDailyClosingRates() {
         Map<Object, Object> rates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
