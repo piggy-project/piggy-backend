@@ -22,6 +22,7 @@ public class SerpShopService {
     private final ObjectMapper objectMapper;
 
     public SerpItemDto getLowestRegionalPrice(String productName, String currencyCode) {
+        log.info("[SERP] 가격 조회 시작 - 검색어: {}, 통화: {}", productName, currencyCode);
         // 1. 국가별 타겟 설정
         String gl = currencyCode.equals("THB") ? "th" : "ph";
         String googleDomain = currencyCode.equals("THB") ? "google.co.th" : "google.com.ph";
@@ -33,14 +34,18 @@ public class SerpShopService {
                 .queryParam("gl", gl)
                 .queryParam("api_key", apiKey)
                 .toUriString();
-
+        log.debug("[SERP] 요청 URL: {}", url.replace(apiKey, "SECRET_KEY"));
         try {
             // RestTemplate 결과를 String으로 받아 ObjectMapper로 파싱하거나,
             // 바로 JsonNode로 받는 방식 모두 가능합니다.
             JsonNode root = restTemplate.getForObject(url, JsonNode.class);
-            if (root == null) return null;
+            if (root == null || !root.has("shopping_results")) {
+                log.warn("[SERP] API 응답이 비어있거나 검색 결과가 없습니다.");
+                return null;
+            }
 
             JsonNode shoppingResults = root.path("shopping_results");
+            log.info("[SERP] 총 {}개의 쇼핑 결과를 수신했습니다.", shoppingResults.size());
 
             for (JsonNode item : shoppingResults) {
                 String source = item.path("source").asText().toLowerCase();
@@ -58,6 +63,7 @@ public class SerpShopService {
                             .build();
                 }
             }
+            log.warn("[SERP] 검색 결과는 있으나 Shopee 또는 Lazada 상품이 없습니다.");
         } catch (Exception e) {
             log.error("동남아 지역 가격 조회 중 오류 발생 (통화: {}): ", currencyCode, e);
         }

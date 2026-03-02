@@ -100,7 +100,7 @@ public class ComparisonService {
     // 2. 매시 정각/30분마다 지원하는 모든 통화의 캐시 갱신
     @Scheduled(cron = "0 0,30 * * * *")
     public void refreshAllCurrenciesCache() {
-        List<String> currencies = List.of("JPY", "THB", "PHP"); // 지원하는 통화 리스트
+        List<String> currencies = List.of("JPY", "THB", "PHP", "USD", "EUR"); // 지원하는 통화 리스트
         for (String code : currencies) {
             refreshPopularItemsCache(code);
         }
