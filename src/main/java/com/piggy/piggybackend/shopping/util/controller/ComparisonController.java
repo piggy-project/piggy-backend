@@ -18,12 +18,16 @@ import java.util.List;
 public class ComparisonController {
     private final ComparisonService comparisonService;
 
-    //상품 검색 및 가격 목록 출력
+    // 상품 검색 및 가격 목록 출력
     @GetMapping("/compare")
-    public ResponseEntity<ComparisonResponse> compare(@RequestParam String query) {
-        return ResponseEntity.ok(comparisonService.comparePrices(query));
+    public ResponseEntity<ComparisonResponse> compare(
+            @RequestParam String query,
+            @RequestParam String currencyCode
+    ) {
+        return ResponseEntity.ok(comparisonService.comparePrices(query, currencyCode));
     }
-    // Redis 기반 인기 상품 추천(많이 검색한 상품)
+
+    // Redis 기반 인기 상품 추천
     @GetMapping("/popular")
     public ResponseEntity<List<UnifiedItemDto>> getPopular() {
         return ResponseEntity.ok(comparisonService.getPopularItems());

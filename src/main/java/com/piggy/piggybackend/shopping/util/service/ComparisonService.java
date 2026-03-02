@@ -8,6 +8,7 @@ import com.piggy.piggybackend.global.exception.ErrorCode;
 import com.piggy.piggybackend.global.redis.service.SearchRankingService;
 import com.piggy.piggybackend.shopping.util.dto.ComparisonResponse;
 import com.piggy.piggybackend.shopping.util.dto.RakutenItemDto;
+import com.piggy.piggybackend.shopping.util.dto.SerpItemDto;
 import com.piggy.piggybackend.shopping.util.dto.UnifiedItemDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,33 +32,52 @@ public class ComparisonService {
     private final SearchRankingService rankingService;
     private final StringRedisTemplate redisTemplate; // Redis 연동을 위한 템플릿
     private final ObjectMapper objectMapper; // JSON 변환을 위한 객체
+    private final SerpShopService serpShopService;
 
     private static final String CACHE_KEY = "popular_items_cache";
 
-    public ComparisonResponse comparePrices(String query) {
+    public ComparisonResponse comparePrices(String query, String currencyCode) {
         try {
+            // 기존 검색어 랭킹 로직 유지
             rankingService.incrementKeywordCount(query);
 
-            // 1. API 호출 (실패 시 서비스 내부에서 예외를 던지거나 null 반환 가정)
+            // 1. 네이버 API 호출 (한국 가격은 항상 공통)
             var naverResult = naverService.searchItems(query);
-            var rakutenResult = rakutenService.searchItems(query);
 
-            // 2. 환율 데이터 확인 (앱의 핵심 데이터이므로 없으면 에러)
-            var jpyDetail = exchangeRateService.getExchangeDetail("JPY");
-            if (jpyDetail == null) {
+            // 2. 외화 결과 분기 처리 (통화 코드에 따라 분기)
+            RakutenItemDto rakutenResult = null;
+            SerpItemDto serpResult = null;
+
+            if ("JPY".equals(currencyCode)) {
+                // 일본일 경우 기존처럼 라쿠텐 호출
+                rakutenResult = rakutenService.searchItems(query);
+            } else if ("THB".equals(currencyCode) || "PHP".equals(currencyCode)) {
+                // 동남아일 경우 SerpShopService 호출 (SerpItemDto 반환)
+                serpResult = serpShopService.getLowestRegionalPrice(query, currencyCode);
+            }
+
+            // 3. 환율 데이터 확인 (입력받은 currencyCode에 맞춰 동적 조회)
+            var exchangeDetail = exchangeRateService.getExchangeDetail(currencyCode);
+            if (exchangeDetail == null) {
                 throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
             }
-            double exchangeRate = jpyDetail.getCurrentRate();
+            double exchangeRate = exchangeDetail.getCurrentRate();
 
+            // 4. 빌더 패턴에 맞춰 결과 조립
             return ComparisonResponse.builder()
                     .naverResults(naverResult)
                     .rakutenResults(rakutenResult)
+                    .serpResults(serpResult)  // 추가된 SerpItemDto 결과
                     .exchangeRate(exchangeRate)
+                    .currencyCode(currencyCode)
                     .build();
+
         } catch (CustomException e) {
-            throw e; // 이미 정의된 예외는 그대로 전달
+            // 이미 정의된 예외는 그대로 전달 (기존 유지)
+            throw e;
         } catch (Exception e) {
-            log.error("검색 중 예상치 못한 에러: ", e);
+            // 예상치 못한 에러 로깅 및 공통 에러 반환 (기존 유지)
+            log.error("검색 중 예상치 못한 에러 (통화: {}): ", currencyCode, e);
             throw new CustomException(ErrorCode.SHOPPING_API_ERROR);
         }
     }
