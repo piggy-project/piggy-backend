@@ -13,16 +13,28 @@ import java.util.Set;
 public class SearchRankingService {
 
     private final StringRedisTemplate redisTemplate;
-    private static final String RANKING_KEY = "search_ranking";
+    private static final String RANKING_KEY_PREFIX = "search_ranking:";
 
     // 검색어 카운트 증가 (ZINCRBY)
-    public void incrementKeywordCount(String keyword) {
-        redisTemplate.opsForZSet().incrementScore(RANKING_KEY, keyword, 1);
+    public void incrementKeywordCount(String keyword, String currencyCode) {
+        // 1. 해당 국가 전용 랭킹 (예: search_ranking:JPY)
+        redisTemplate.opsForZSet().incrementScore(RANKING_KEY_PREFIX + currencyCode, keyword, 1);
+
+        // 2. 전체 통합 랭킹 (예: search_ranking:ALL) - Fallback용
+        redisTemplate.opsForZSet().incrementScore(RANKING_KEY_PREFIX + "ALL", keyword, 1);
     }
 
     // 상위 N개 키워드 조회 (ZREVRANGE)
-    public List<String> getTopKeywords(int n) {
-        Set<String> range = redisTemplate.opsForZSet().reverseRange(RANKING_KEY, 0, n - 1);
-        return range != null ? new ArrayList<>(range) : new ArrayList<>();
+    public List<String> getTopKeywords(String currencyCode, int limit) {
+        String key = RANKING_KEY_PREFIX + currencyCode;
+
+        // Redis에서 점수가 높은 순으로 조회
+        Set<String> range = redisTemplate.opsForZSet().reverseRange(key, 0, limit - 1);
+
+        if (range == null || range.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        return new ArrayList<>(range);
     }
 }

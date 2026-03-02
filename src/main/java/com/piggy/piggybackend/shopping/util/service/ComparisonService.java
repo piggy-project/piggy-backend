@@ -35,9 +35,10 @@ public class ComparisonService {
     private final SerpShopService serpShopService;
 
     private static final String CACHE_KEY_PREFIX = "popular_items_cache:";
+
     public ComparisonResponse comparePrices(String query, String currencyCode) {
         try {
-            rankingService.incrementKeywordCount(query);
+            rankingService.incrementKeywordCount(query, currencyCode);
 
             // 1. 네이버 API 호출
             var naverResult = naverService.searchItems(query);
@@ -108,7 +109,13 @@ public class ComparisonService {
     public void refreshPopularItemsCache(String currencyCode) {
         log.info("{} 인기 아이템 캐시 갱신 시작", currencyCode);
         try {
-            List<String> topKeywords = rankingService.getTopKeywords(6);
+            List<String> topKeywords = rankingService.getTopKeywords(currencyCode, 6);
+
+            // 검색어가 하나도 없는 신규 국가의 경우 JPY나 전체 인기 키워드를 Fallback으로 사용 가능
+            if (topKeywords.isEmpty()) {
+                topKeywords = rankingService.getTopKeywords("ALL", 6);
+            }
+
             var exchangeDetail = exchangeRateService.getExchangeDetail(currencyCode);
             if (exchangeDetail == null) return;
             double rate = exchangeDetail.getCurrentRate();
