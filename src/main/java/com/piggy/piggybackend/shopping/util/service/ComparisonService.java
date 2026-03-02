@@ -34,8 +34,7 @@ public class ComparisonService {
     private final ObjectMapper objectMapper; // JSON 변환을 위한 객체
     private final SerpShopService serpShopService;
 
-    private static final String CACHE_KEY = "popular_items_cache";
-
+    private static final String CACHE_KEY_PREFIX = "popular_items_cache:";
     public ComparisonResponse comparePrices(String query, String currencyCode) {
         try {
             // 기존 검색어 랭킹 로직 유지
@@ -83,64 +82,69 @@ public class ComparisonService {
     }
 
     // 인기 아이템 리스트 (캐시 읽기)
-    public List<UnifiedItemDto> getPopularItems() {
+    // 1. 통화별 추천 아이템 가져오기
+    public List<UnifiedItemDto> getPopularItems(String currencyCode) {
+        String cacheKey = CACHE_KEY_PREFIX + currencyCode;
         try {
-            List<UnifiedItemDto> cached = getCachedItems(CACHE_KEY);
+            List<UnifiedItemDto> cached = getCachedItems(cacheKey);
             if (cached == null || cached.isEmpty()) {
-                refreshPopularItemsCache();
-                cached = getCachedItems(CACHE_KEY);
-            }
-
-            if (cached == null || cached.isEmpty()) {
-                throw new CustomException(ErrorCode.EMPTY_SEARCH_RESULT);
+                // 캐시가 없으면 즉시 한 번 갱신 시도 (혹은 빈 리스트 반환)
+                return List.of();
             }
             return cached;
         } catch (Exception e) {
-            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR);
+            log.error("추천 아이템 조회 에러: ", e);
+            return List.of();
+        }
+    }
+    // 2. 매시 정각/30분마다 지원하는 모든 통화의 캐시 갱신
+    @Scheduled(cron = "0 0,30 * * * *")
+    public void refreshAllCurrenciesCache() {
+        List<String> currencies = List.of("JPY", "THB", "PHP"); // 지원하는 통화 리스트
+        for (String code : currencies) {
+            refreshPopularItemsCache(code);
         }
     }
     // 2. 매시 정각/30분마다 자동 갱신
-    @Scheduled(cron = "0 0,30 * * * *")
-    public void refreshPopularItemsCache() {
-        log.info("인기 아이템 캐시 갱신 시작");
+    public void refreshPopularItemsCache(String currencyCode) {
+        log.info("{} 인기 아이템 캐시 갱신 시작", currencyCode);
         try {
+            // 해당 국가에서 많이 검색된 키워드 (RankingService가 통화별 기능을 지원한다고 가정하거나 공통 사용)
             List<String> topKeywords = rankingService.getTopKeywords(6);
 
-            // 환율 정보가 없으면 작업 중단
-            var jpyDetail = exchangeRateService.getExchangeDetail("JPY");
-            if (jpyDetail == null) {
-                log.error("캐시 갱신 실패: 환율 데이터를 찾을 수 없습니다.");
-                return;
-            }
-            double jpyRate = jpyDetail.getCurrentRate();
+            var exchangeDetail = exchangeRateService.getExchangeDetail(currencyCode);
+            if (exchangeDetail == null) return;
+            double rate = exchangeDetail.getCurrentRate();
 
             List<UnifiedItemDto> items = topKeywords.stream().map(keyword -> {
                 try {
-                    Thread.sleep(1000);
-                    var result = rakutenService.searchItems(keyword);
-                    if (result == null || result.getItems().isEmpty()) return null;
+                    Thread.sleep(500); // API 과부하 방지
 
-                    var item = result.getItems().get(0).getItem();
-                    return UnifiedItemDto.builder()
-                            .id(item.getItemUrl())
-                            .name(item.getItemName())
-                            .price(item.getItemPrice())
-                            .imageUrl(item.getMediumImageUrls().get(0).getImageUrl())
-                            .source("RAKUTEN")
-                            .exchangeRate(jpyRate)
-                            .build();
-                } catch (Exception e) {
-                    log.warn("키워드 [{}] 검색 실패: {}", keyword, e.getMessage());
-                    return null;
-                }
+                    if ("JPY".equals(currencyCode)) {
+                        var res = rakutenService.searchItems(keyword);
+                        if (res == null || res.getItems().isEmpty()) return null;
+                        var item = res.getItems().get(0).getItem();
+                        return UnifiedItemDto.builder()
+                                .id(item.getItemUrl()).name(item.getItemName()).price(item.getItemPrice())
+                                .imageUrl(item.getMediumImageUrls().get(0).getImageUrl())
+                                .source("RAKUTEN").exchangeRate(rate).build();
+                    } else {
+                        // 동남아(THB, PHP 등)는 SerpApi 사용
+                        var item = serpShopService.getLowestRegionalPrice(keyword, currencyCode);
+                        if (item == null) return null;
+                        return UnifiedItemDto.builder()
+                                .id(item.getLink()).name(item.getTitle()).price((int)item.getPrice())
+                                .imageUrl(item.getThumbnail())
+                                .source("SERP").exchangeRate(rate).build();
+                    }
+                } catch (Exception e) { return null; }
             }).filter(Objects::nonNull).collect(Collectors.toList());
 
             if (!items.isEmpty()) {
-                saveToCache(CACHE_KEY, items, 35);
-                log.info("캐시 갱신 완료 (총 {}개 아이템)", items.size());
+                saveToCache(CACHE_KEY_PREFIX + currencyCode, items, 35);
             }
         } catch (Exception e) {
-            log.error("스케줄러 실행 중 심각한 에러: ", e);
+            log.error("{} 캐시 갱신 중 에러: ", currencyCode, e);
         }
     }
 

@@ -29,7 +29,7 @@ public class ComparisonController {
 
     // Redis 기반 인기 상품 추천
     @GetMapping("/popular")
-    public ResponseEntity<List<UnifiedItemDto>> getPopular() {
-        return ResponseEntity.ok(comparisonService.getPopularItems());
+    public ResponseEntity<List<UnifiedItemDto>> getPopular(@RequestParam String currencyCode) {
+        return ResponseEntity.ok(comparisonService.getPopularItems(currencyCode));
     }
 }
