@@ -48,10 +48,9 @@ public class ComparisonService {
             SerpItemDto serpResult = null;
 
             if ("JPY".equals(currencyCode)) {
-                // 일본일 경우 기존처럼 라쿠텐 호출
                 rakutenResult = rakutenService.searchItems(query);
-            } else if ("THB".equals(currencyCode) || "PHP".equals(currencyCode)) {
-                // 동남아일 경우 SerpShopService 호출 (SerpItemDto 반환)
+            }
+            else if ("THB".equals(currencyCode) || "PHP".equals(currencyCode) || "VND".equals(currencyCode)) {
                 serpResult = serpShopService.getLowestRegionalPrice(query, currencyCode);
             }
 
