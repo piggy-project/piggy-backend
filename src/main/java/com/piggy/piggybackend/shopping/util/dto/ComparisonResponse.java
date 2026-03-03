@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class ComparisonResponse {
     private NaverShopDto naverResults;
     private RakutenItemDto rakutenResults;
-    private List<SerpItemDto> serpResults; // List로 유지
+    private List<SerpItemDto> serpResults;
     private double exchangeRate;
     private String currencyCode;
 }

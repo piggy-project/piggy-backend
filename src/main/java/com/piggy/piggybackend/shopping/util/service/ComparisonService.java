@@ -30,8 +30,8 @@ public class ComparisonService {
     private final RakutenService rakutenService;
     private final ExchangeRateService exchangeRateService;
     private final SearchRankingService rankingService;
-    private final StringRedisTemplate redisTemplate; // Redis 연동을 위한 템플릿
-    private final ObjectMapper objectMapper; // JSON 변환을 위한 객체
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
     private final SerpShopService serpShopService;
     private final EbayShopService ebayShopService;
 

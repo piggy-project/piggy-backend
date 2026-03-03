@@ -64,18 +64,24 @@ public class SerpShopService {
             log.info("[SERP] 총 {}개의 쇼핑 결과를 수신했습니다.", shoppingResults.size());
 
             for (JsonNode item : shoppingResults) {
-                // 최대 10개까지만 수집
                 if (results.size() >= 10) break;
 
                 String source = item.path("source").asText().toLowerCase();
 
-                // 쇼피나 라자다 결과만 필터링
                 if (source.contains("shopee") || source.contains("lazada")) {
+                    // link 필드가 없으면 product_link 필드를 시도합니다.
+                    String itemLink = item.path("link").asText();
+                    if (itemLink.isEmpty() || itemLink.equals("#")) {
+                        itemLink = item.path("product_link").asText("#");
+                    }
+
+                    log.info("[SERP] 추출된 상품 링크: {}", itemLink); // 로그로 링크가 정상인지 확인
+
                     results.add(SerpItemDto.builder()
                             .source(item.path("source").asText())
                             .title(item.path("title").asText())
                             .price(item.path("extracted_price").asDouble())
-                            .link(item.path("link").asText())
+                            .link(itemLink) // 보완된 링크 저장
                             .thumbnail(item.path("thumbnail").asText())
                             .build());
                 }
