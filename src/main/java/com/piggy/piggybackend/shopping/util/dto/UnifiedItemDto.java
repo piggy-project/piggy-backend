@@ -6,7 +6,7 @@ import lombok.Getter;
 @Getter
 @Builder
 public class UnifiedItemDto {
-    private String id;        // 여기서 ID를 통일합니다!
+    private String id;
     private String name;
     private int price;
     private String imageUrl;
