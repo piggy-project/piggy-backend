@@ -124,6 +124,10 @@ api:
     key: ${EXCHANGERATE_API_KEY}
     url: https://v6.exchangerate-api.com/v6/
 
+ebay:
+  client-id: ${EBAY_CLIENT_ID}
+  client-secret: ${EBAY_CLIENT_SECRET}
+
 server:
   port: 8080
   forward-headers-strategy: framework

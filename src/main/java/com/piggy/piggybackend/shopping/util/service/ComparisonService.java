@@ -33,6 +33,7 @@ public class ComparisonService {
     private final StringRedisTemplate redisTemplate; // Redis 연동을 위한 템플릿
     private final ObjectMapper objectMapper; // JSON 변환을 위한 객체
     private final SerpShopService serpShopService;
+    private final EbayShopService ebayShopService;
 
     private static final String CACHE_KEY_PREFIX = "popular_items_cache:";
 
@@ -50,10 +51,13 @@ public class ComparisonService {
             if ("JPY".equals(currencyCode)) {
                 rakutenResult = rakutenService.searchItems(query);
             }
-            // 베트남(VND) 조건 추가
-            else if ("THB".equals(currencyCode) || "PHP".equals(currencyCode) || "VND".equals(currencyCode)) {
-                // 이전에 수정한 getRegionalProducts(리스트 반환 메서드) 호출
+            // 동남아 3국 (VND 추가됨)
+            else if (List.of("THB", "PHP", "VND").contains(currencyCode)) {
                 serpResults = serpShopService.getRegionalProducts(query, currencyCode);
+            }
+            // 미국 및 유럽
+            else if ("USD".equals(currencyCode) || "EUR".equals(currencyCode)) {
+                serpResults = ebayShopService.getEbayProducts(query, currencyCode);
             }
 
             // 3. 환율 데이터 확인
