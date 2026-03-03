@@ -85,8 +85,6 @@ public class EbayShopService {
 
     // 2. 상품 검색 (이 부분은 기존과 거의 동일하지만 getAccessToken()을 호출하는 구조는 유지)
     public List<SerpItemDto> getEbayProducts(String query, String currencyCode) {
-        log.info("[eBay] 상품 검색 시작 - 검색어: {}, 통화: {}", query, currencyCode);
-
         try {
             String token = getAccessToken();
             String marketplaceId = "USD".equals(currencyCode) ? "EBAY_US" : "EBAY_DE";
@@ -119,7 +117,6 @@ public class EbayShopService {
                             .build());
                 }
             }
-            log.info("[eBay] {}개의 상품을 성공적으로 가져왔습니다.", results.size());
             return results;
 
         } catch (Exception e) {

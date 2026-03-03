@@ -26,8 +26,6 @@ public class SerpShopService {
 
     // 리턴 타입을 List<SerpItemDto>로 변경
     public List<SerpItemDto> getRegionalProducts(String productName, String currencyCode) {
-        log.info("[SERP] 가격 조회 시작 - 검색어: {}, 통화: {}", productName, currencyCode);
-
         // 1. 국가별 타겟 설정 (베트남 추가)
         String gl;
         String googleDomain;
@@ -61,8 +59,6 @@ public class SerpShopService {
             }
 
             JsonNode shoppingResults = root.path("shopping_results");
-            log.info("[SERP] 총 {}개의 쇼핑 결과를 수신했습니다.", shoppingResults.size());
-
             for (JsonNode item : shoppingResults) {
                 if (results.size() >= 10) break;
 
@@ -75,8 +71,6 @@ public class SerpShopService {
                         itemLink = item.path("product_link").asText("#");
                     }
 
-                    log.info("[SERP] 추출된 상품 링크: {}", itemLink); // 로그로 링크가 정상인지 확인
-
                     results.add(SerpItemDto.builder()
                             .source(item.path("source").asText())
                             .title(item.path("title").asText())
@@ -86,7 +80,6 @@ public class SerpShopService {
                             .build());
                 }
             }
-            log.info("[SERP] 필터링된 결과 {}개를 반환합니다.", results.size());
         } catch (Exception e) {
             log.error("[SERP] 오류 발생: ", e);
         }
