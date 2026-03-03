@@ -129,6 +129,7 @@ public class ComparisonService {
                     Thread.sleep(500);
 
                     if ("JPY".equals(currencyCode)) {
+                        // 1. 일본 (라쿠텐)
                         var res = rakutenService.searchItems(keyword);
                         if (res == null || res.getItems().isEmpty()) return null;
                         var item = res.getItems().get(0).getItem();
@@ -136,12 +137,28 @@ public class ComparisonService {
                                 .id(item.getItemUrl()).name(item.getItemName()).price(item.getItemPrice())
                                 .imageUrl(item.getMediumImageUrls().get(0).getImageUrl())
                                 .source("RAKUTEN").exchangeRate(rate).build();
-                    } else {
-                        // SerpApi 결과 리스트 중 첫 번째 아이템을 추천템으로 선정
+                    }
+                    else if ("USD".equals(currencyCode) || "EUR".equals(currencyCode)) {
+                        // 2. 미국/유럽 (eBay) - 추가된 로직
+                        var resList = ebayShopService.getEbayProducts(keyword, currencyCode);
+                        if (resList == null || resList.isEmpty()) return null;
+
+                        var item = resList.get(0); // 검색 결과 중 가장 정확도가 높은 첫 번째 상품
+                        return UnifiedItemDto.builder()
+                                .id(item.getLink())
+                                .name(item.getTitle())
+                                .price((int) item.getPrice())
+                                .imageUrl(item.getThumbnail())
+                                .source("EBAY") // 출처 구분
+                                .exchangeRate(rate)
+                                .build();
+                    }
+                    else {
+                        // 3. 동남아 (SerpApi - Shopee/Lazada)
                         var resList = serpShopService.getRegionalProducts(keyword, currencyCode);
                         if (resList == null || resList.isEmpty()) return null;
 
-                        var item = resList.get(0); // 첫 번째 상품
+                        var item = resList.get(0);
                         return UnifiedItemDto.builder()
                                 .id(item.getLink()).name(item.getTitle()).price((int)item.getPrice())
                                 .imageUrl(item.getThumbnail())
