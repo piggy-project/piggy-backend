@@ -35,8 +35,8 @@ jobs:
 
       - name: Docker image build & push
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/som:${{ steps.set_tag.outputs.tag }} .
-          docker push ${{ secrets.DOCKER_USERNAME }}/som:${{ steps.set_tag.outputs.tag }}
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/piggy:${{ steps.set_tag.outputs.tag }} .
+          docker push ${{ secrets.DOCKER_USERNAME }}/piggy:${{ steps.set_tag.outputs.tag }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -49,7 +49,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd /home/ubuntu/som
+            cd /home/ubuntu/piggy
 
             sudo docker compose down
             sudo docker compose pull
