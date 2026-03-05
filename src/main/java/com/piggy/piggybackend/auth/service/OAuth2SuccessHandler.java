@@ -63,7 +63,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     path, accessToken, refreshToken);
         } else {
             // 웹용
-            targetUrl = String.format("https://piggys.mooo.com/oauth/%s?token=%s&refreshToken=%s",
+            targetUrl = String.format("http://localhost:5173/oauth/%s?token=%s&refreshToken=%s",
                     path, accessToken, refreshToken);
         }
 
