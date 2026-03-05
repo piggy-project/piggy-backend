@@ -1,6 +1,6 @@
 spring:
   application:
-    name: som-backend
+    name: piggy-backend
   servlet:
     multipart:
       enabled: true            # 멀티파트 기능 활성화
@@ -14,7 +14,7 @@ spring:
       enabled: false
 
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/som?serverTimezone=Asia/Seoul}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/piggy?serverTimezone=Asia/Seoul}
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:REMOVED}
