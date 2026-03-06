@@ -31,6 +31,8 @@ public class RegionalFood {
     @Column(columnDefinition = "TEXT")
     private String description; // 음식에 대한 한글 설명 (desc)
 
+    @Column String imageUrl;
+
     // 업데이트가 필요할 경우를 위한 편의 메서드
     public void update(Integer rank, String name, String category, Double rating, String description) {
         this.rank = rank;
