@@ -20,12 +20,10 @@ public class FoodService {
 
     @Transactional(readOnly = true)
     public List<FoodResponse> getRandomFiveFoods(String countryCode) {
-        log.info("### [Service] DB 조회 시작 - 국가코드: {}", countryCode);
         // 1. 해당 국가의 전체 음식(100개)을 가져옵니다.
         List<RegionalFood> allFoods =
                 foodRepository.findByCountryCodeOrderByRankAsc(countryCode);
 
-        log.info("### [Service] DB 조회 완료 - 검색된 데이터 수: {}", allFoods.size());
         // 2. 리스트를 무작위로 섞습니다.
         Collections.shuffle(allFoods);
 

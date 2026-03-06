@@ -23,9 +23,7 @@ public class FoodController {
     @GetMapping
     public ResponseEntity<List<FoodResponse>> getRegionalFoods(@RequestParam String currencyCode) {
         // 서비스에서 랜덤으로 5개를 뽑아옵니다.
-        log.info("### [GET] /food 호출됨 - 파라미터 currencyCode: {}", currencyCode);
         List<FoodResponse> randomFoods = foodService.getRandomFiveFoods(currencyCode);
-        log.info("### [GET] /food 반환 데이터 개수: {}", randomFoods.size());
         return ResponseEntity.ok(randomFoods);
     }
 }

@@ -45,17 +45,15 @@ public class ExchangeRateService {
 
 
     private static final Map<String, String> currencyMap = Map.ofEntries(
-            Map.entry("USD", "미국 달러"), Map.entry("EUR", "유럽연합 유로"),
-            Map.entry("JPY", "일본 엔"), Map.entry("CNY", "중국 위안"),
-            Map.entry("HKD", "홍콩 달러"), Map.entry("GBP", "영국 파운드"),
-            Map.entry("CHF", "스위스 프랑"), Map.entry("CAD", "캐나다 달러"),
-            Map.entry("AUD", "호주 달러"), Map.entry("NZD", "뉴질랜드 달러"),
-            Map.entry("SGD", "싱가포르 달러"), Map.entry("THB", "태국 바트"),
-            Map.entry("VND", "베트남 동"), Map.entry("PHP", "필리핀 페소"),
-            Map.entry("MYR", "말레이시아 링깃"), Map.entry("TWD", "대만 달러"),
-            Map.entry("SAR", "사우디 리얄"), Map.entry("AED", "아랍에미리트 디르함"),
-            Map.entry("KWD", "쿠웨이트 디나르"), Map.entry("BHD", "바레인 디나르"),
-            Map.entry("IDR", "인도네시아 루피아"), Map.entry("SEK", "스웨덴 크로나")
+            Map.entry("JPY", "일본 엔"),
+            Map.entry("USD", "미국 달러"),
+            Map.entry("CNY", "중국 위안"),
+            Map.entry("VND", "베트남 동"),
+            Map.entry("THB", "태국 바트"),
+            Map.entry("PHP", "필리핀 페소"),
+            Map.entry("EUR", "유럽연합 유로"), // 독일, 프랑스 공통
+            Map.entry("AUD", "호주 달러"),
+            Map.entry("GBP", "영국 파운드")
     );
 
     @Value("${EXCHANGE_RATE_API_KEY}")
@@ -189,7 +187,9 @@ public class ExchangeRateService {
 
     // 3. 상세 환율 조회 (Redis 기반)
     @Transactional(readOnly = true)
-    public ExchangeDetailResponseDto getExchangeDetail(String code) {
+    public ExchangeDetailResponseDto getExchangeDetail(String inputCode) {
+        String code = sanitizeCode(inputCode);
+
         // 지원하지 않는 통화 코드 요청 시 에러 처리
         if (!currencyMap.containsKey(code)) {
             throw new CustomException(ErrorCode.GRAPH_NOT_SUPPORTED);
@@ -225,7 +225,7 @@ public class ExchangeRateService {
         Object low = redisTemplate.opsForHash().get(REDIS_LOW_RATES, code);
 
         return ExchangeDetailResponseDto.builder()
-                .code(code)
+                .code(inputCode)
                 .currentRate(currentRate)
                 .change(Math.round(change * 100) / 100.0)
                 .percentChange(Math.round(percentChange * 100) / 100.0)
@@ -235,8 +235,10 @@ public class ExchangeRateService {
     }
 
     // 전일 마감가 DB 조회 로직
-    public List<ExchangeHistoryResponseDto> getExchangeHistory(String code) {
+    public List<ExchangeHistoryResponseDto> getExchangeHistory(String inputCode) {
+        String code = sanitizeCode(inputCode);
         String dbCode = "JPY".equals(code) ? "JPY(100)" : code;
+
         List<ExchangeRate> history = repository.findAllByCurUnitOrderBySearchDateAsc(dbCode);
         return history.stream()
                 .map(record -> {
@@ -245,5 +247,10 @@ public class ExchangeRateService {
                     return new ExchangeHistoryResponseDto(formattedDate, record.getDealBasR());
                 })
                 .collect(Collectors.toList());
+    }
+    // 프론트에서 보낸 식별자(DEU_EUR 등)를 표준 통화 코드로 변환하는 헬퍼
+    private String sanitizeCode(String code) {
+        if (code.equals("DEU_EUR") || code.equals("FRA_EUR")) return "EUR";
+        return code.toUpperCase();
     }
 }
