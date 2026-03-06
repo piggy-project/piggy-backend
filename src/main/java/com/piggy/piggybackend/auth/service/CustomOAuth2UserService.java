@@ -49,7 +49,7 @@ public class CustomOAuth2UserService
                     userRepository.findByEmail(userInfo.getEmail())
                             .ifPresent(u -> {
                                 String korProvider = getProviderKorName(u.getProvider());
-                                String message = String.format("이미 %s로 가입된 계정입니다. %s로 로그인하시겠습니까?", korProvider, korProvider);
+                                String message = String.format("이미 %s로 가입된 계정입니다. %s로 로그인해주세요.", korProvider, korProvider);
 
                                 throw new OAuth2AuthenticationException(new OAuth2Error("duplicate_email"), message);
                             });
