@@ -25,16 +25,16 @@ public class ExchangeRateController {
     }
 
     // 상세 환율 조회
-    @GetMapping("/rates/{code}")
+    @GetMapping("/detail/{code}")
     public ResponseEntity<ExchangeDetailResponseDto> getExchangeDetail(
             @PathVariable String code) {
         return ResponseEntity.ok(exchangeRateService.getExchangeDetail(code));
     }
 
     // 환율 히스토리 조회
-    @GetMapping("/history/{code}")
+    @GetMapping("/history")
     public ResponseEntity<List<ExchangeHistoryResponseDto>> getExchangeHistory(
-            @PathVariable String code) {
+            @RequestParam String code) { // @PathVariable 대신 @RequestParam 사용
         return ResponseEntity.ok(exchangeRateService.getExchangeHistory(code));
     }
 
