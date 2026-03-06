@@ -3,6 +3,7 @@ package com.piggy.piggybackend.exchange.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.piggy.piggybackend.exchange.dto.ExchangeDetailResponseDto;
 import com.piggy.piggybackend.exchange.dto.ExchangeHistoryResponseDto;
+import com.piggy.piggybackend.exchange.dto.ExchangeRankingResponseDto;
 import com.piggy.piggybackend.exchange.dto.ExchangeRateResponseDto;
 import com.piggy.piggybackend.exchange.entity.ExchangeRate;
 import com.piggy.piggybackend.exchange.repository.ExchangeRateRepository;
@@ -25,7 +26,6 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -43,17 +43,18 @@ public class ExchangeRateService {
     private static final String REDIS_HIGH_RATES = "exchange:high";
     private static final String REDIS_LOW_RATES = "exchange:low";
 
-
     private static final Map<String, String> currencyMap = Map.ofEntries(
-            Map.entry("JPY", "일본 엔"),
-            Map.entry("USD", "미국 달러"),
-            Map.entry("CNY", "중국 위안"),
-            Map.entry("VND", "베트남 동"),
-            Map.entry("THB", "태국 바트"),
-            Map.entry("PHP", "필리핀 페소"),
-            Map.entry("EUR", "유럽연합 유로"), // 독일, 프랑스 공통
-            Map.entry("AUD", "호주 달러"),
-            Map.entry("GBP", "영국 파운드")
+            Map.entry("USD", "미국 달러"), Map.entry("EUR", "유럽연합 유로"),
+            Map.entry("JPY", "일본 엔"), Map.entry("CNY", "중국 위안"),
+            Map.entry("HKD", "홍콩 달러"), Map.entry("GBP", "영국 파운드"),
+            Map.entry("CHF", "스위스 프랑"), Map.entry("CAD", "캐나다 달러"),
+            Map.entry("AUD", "호주 달러"), Map.entry("NZD", "뉴질랜드 달러"),
+            Map.entry("SGD", "싱가포르 달러"), Map.entry("THB", "태국 바트"),
+            Map.entry("VND", "베트남 동"), Map.entry("PHP", "필리핀 페소"),
+            Map.entry("MYR", "말레이시아 링깃"), Map.entry("TWD", "대만 달러"),
+            Map.entry("SAR", "사우디 리얄"), Map.entry("AED", "아랍에미리트 디르함"),
+            Map.entry("KWD", "쿠웨이트 디나르"), Map.entry("BHD", "바레인 디나르"),
+            Map.entry("IDR", "인도네시아 루피아"), Map.entry("SEK", "스웨덴 크로나")
     );
 
     @Value("${EXCHANGE_RATE_API_KEY}")
@@ -71,7 +72,7 @@ public class ExchangeRateService {
 
             if (response.statusCode() != 200) {
                 log.error("외부 환율 API 에러: HTTP Status {}", response.statusCode());
-                return; // 스케줄러이므로 예외를 던지기보다 로그를 남기고 종료
+                return;
             }
             Map<String, Object> body = objectMapper.readValue(response.body(), Map.class);
             Map<String, Object> responseMap = (Map<String, Object>) body.get("response");
@@ -92,7 +93,6 @@ public class ExchangeRateService {
                     if ("JPY".equals(code)) krwRate *= 100;
 
                     double roundedRate = Math.round(krwRate * 100) / 100.0;
-                    // Redis Hash에 실시간 환율 저장
                     redisTemplate.opsForHash().put(REDIS_LIVE_RATES, code, String.valueOf(roundedRate));
                     updateHighLowInRedis(code, roundedRate);
                 }
@@ -117,7 +117,8 @@ public class ExchangeRateService {
 
         if (currentRate >= lastHigh)
             redisTemplate.opsForHash().put(REDIS_HIGH_RATES, code, String.valueOf(currentRate));
-        if (currentRate <= lastLow) redisTemplate.opsForHash().put(REDIS_LOW_RATES, code, String.valueOf(currentRate));
+        if (currentRate <= lastLow)
+            redisTemplate.opsForHash().put(REDIS_LOW_RATES, code, String.valueOf(currentRate));
     }
 
     @Scheduled(cron = "0 0 0 * * *")
@@ -127,7 +128,7 @@ public class ExchangeRateService {
         log.info("자정 경과: Redis 당일 고가/저가 초기화 완료");
     }
 
-    //Redis 기반으로 마감 환율 저장
+    // Redis 기반으로 마감 환율 저장
     @Scheduled(cron = "0 10 2 * * *")
     @Transactional
     public void saveDailyClosingRates() {
@@ -153,20 +154,18 @@ public class ExchangeRateService {
                 .collect(Collectors.toList());
 
         repository.saveAll(closingRates);
-        log.info(" [{}] Redis 데이터를 기반으로 전일 마감 환율 DB 저장 완료", yesterday);
+        log.info("[{}] Redis 데이터를 기반으로 전일 마감 환율 DB 저장 완료", yesterday);
     }
 
     // 2. 전체 환율 조회 (Redis 기반)
     public List<ExchangeRateResponseDto> getLatestRates() {
         Map<Object, Object> rates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
 
-        // 캐시가 비어있으면 즉시 갱신 시도
         if (rates.isEmpty()) {
             updateLiveRatesCache();
             rates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
         }
 
-        // 갱신 후에도 비어있다면 외부 API 서버 혹은 Redis 문제
         if (rates.isEmpty()) {
             throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
         }
@@ -187,10 +186,7 @@ public class ExchangeRateService {
 
     // 3. 상세 환율 조회 (Redis 기반)
     @Transactional(readOnly = true)
-    public ExchangeDetailResponseDto getExchangeDetail(String inputCode) {
-        String code = sanitizeCode(inputCode);
-
-        // 지원하지 않는 통화 코드 요청 시 에러 처리
+    public ExchangeDetailResponseDto getExchangeDetail(String code) {
         if (!currencyMap.containsKey(code)) {
             throw new CustomException(ErrorCode.GRAPH_NOT_SUPPORTED);
         }
@@ -200,12 +196,11 @@ public class ExchangeRateService {
             updateLiveRatesCache();
             rateObj = redisTemplate.opsForHash().get(REDIS_LIVE_RATES, code);
         }
-        // 여전히 데이터가 없으면 데이터 부재 에러
         if (rateObj == null) {
             throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
         }
 
-        double currentRate = rateObj != null ? Double.parseDouble(rateObj.toString()) : 0.0;
+        double currentRate = Double.parseDouble(rateObj.toString());
         String todayStr = LocalDate.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String dbCode = "JPY".equals(code) ? "JPY(100)" : code;
 
@@ -225,7 +220,7 @@ public class ExchangeRateService {
         Object low = redisTemplate.opsForHash().get(REDIS_LOW_RATES, code);
 
         return ExchangeDetailResponseDto.builder()
-                .code(inputCode)
+                .code(code)
                 .currentRate(currentRate)
                 .change(Math.round(change * 100) / 100.0)
                 .percentChange(Math.round(percentChange * 100) / 100.0)
@@ -234,11 +229,72 @@ public class ExchangeRateService {
                 .build();
     }
 
-    // 전일 마감가 DB 조회 로직
-    public List<ExchangeHistoryResponseDto> getExchangeHistory(String inputCode) {
-        String code = sanitizeCode(inputCode);
-        String dbCode = "JPY".equals(code) ? "JPY(100)" : code;
+    // 4. 환율 랭킹 조회
+    // sort: RISE(급상승), FALL(급하락), HIGH(환율 높은순), LOW(환율 낮은순)
+    @Transactional(readOnly = true)
+    public List<ExchangeRankingResponseDto> getExchangeRanking(String sort) {
 
+        // Redis에서 현재 환율 전체 조회
+        Map<Object, Object> liveRates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
+        if (liveRates.isEmpty()) {
+            updateLiveRatesCache();
+            liveRates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
+        }
+        if (liveRates.isEmpty()) {
+            throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
+        }
+
+        String todayStr = LocalDate.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+        // 전일 마감가 DB에서 한 번에 조회 (N+1 방지)
+        List<ExchangeRate> yesterdayRates = repository.findLatestBeforeDate(todayStr);
+        Map<String, Double> yesterdayRateMap = yesterdayRates.stream()
+                .collect(Collectors.toMap(
+                        e -> "JPY(100)".equals(e.getCurUnit()) ? "JPY" : e.getCurUnit(),
+                        ExchangeRate::getDealBasR,
+                        (a, b) -> a // 중복 키 발생 시 첫 번째 값 유지
+                ));
+
+        // DTO 변환
+        List<ExchangeRankingResponseDto> result = liveRates.entrySet().stream()
+                .filter(e -> currencyMap.containsKey(e.getKey().toString()))
+                .map(e -> {
+                    String code = e.getKey().toString();
+                    double currentRate = Double.parseDouble(e.getValue().toString());
+                    double yesterdayRate = yesterdayRateMap.getOrDefault(code, currentRate);
+
+                    double change = 0.0;
+                    double percentChange = 0.0;
+                    if (yesterdayRate > 0) {
+                        change = currentRate - yesterdayRate;
+                        percentChange = (change / yesterdayRate) * 100;
+                    }
+
+                    return ExchangeRankingResponseDto.builder()
+                            .curUnit(code)
+                            .curNm(currencyMap.get(code))
+                            .rate(currentRate)
+                            .change(Math.round(change * 100) / 100.0)
+                            .percentChange(Math.round(percentChange * 100) / 100.0)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 정렬
+        Comparator<ExchangeRankingResponseDto> comparator = switch (sort.toUpperCase()) {
+            case "RISE" -> Comparator.comparingDouble(ExchangeRankingResponseDto::getPercentChange).reversed();
+            case "FALL" -> Comparator.comparingDouble(ExchangeRankingResponseDto::getPercentChange);
+            case "HIGH" -> Comparator.comparingDouble(ExchangeRankingResponseDto::getRate).reversed();
+            case "LOW"  -> Comparator.comparingDouble(ExchangeRankingResponseDto::getRate);
+            default -> throw new CustomException(ErrorCode.VALIDATION_ERROR, "지원하지 않는 정렬 기준입니다. (RISE/FALL/HIGH/LOW)");
+        };
+
+        return result.stream().sorted(comparator).collect(Collectors.toList());
+    }
+
+    // 전일 마감가 DB 조회 로직
+    public List<ExchangeHistoryResponseDto> getExchangeHistory(String code) {
+        String dbCode = "JPY".equals(code) ? "JPY(100)" : code;
         List<ExchangeRate> history = repository.findAllByCurUnitOrderBySearchDateAsc(dbCode);
         return history.stream()
                 .map(record -> {
@@ -247,10 +303,5 @@ public class ExchangeRateService {
                     return new ExchangeHistoryResponseDto(formattedDate, record.getDealBasR());
                 })
                 .collect(Collectors.toList());
-    }
-    // 프론트에서 보낸 식별자(DEU_EUR 등)를 표준 통화 코드로 변환하는 헬퍼
-    private String sanitizeCode(String code) {
-        if (code.equals("DEU_EUR") || code.equals("FRA_EUR")) return "EUR";
-        return code.toUpperCase();
     }
 }

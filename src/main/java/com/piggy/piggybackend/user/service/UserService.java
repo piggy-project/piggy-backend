@@ -237,4 +237,30 @@ public class UserService {
             throw new CustomException(ErrorCode.INVALID_REQUEST); // 이미 가입 완료된 유저는 삭제 불가
         }
     }
+
+    // 닉네임 변경
+    @Transactional
+    public void updateNickname(String email, NicknameUpdateRequest request) {
+        // 1. 유저 조회
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        String newNickname = request.getNickname();
+
+        // 2. 현재 닉네임과 동일한지 확인
+        if (user.getNickname().equals(newNickname)) {
+            throw new CustomException(
+                    ErrorCode.DUPLICATE_NICKNAME,
+                    "현재 사용 중인 닉네임입니다."
+            );
+        }
+
+        // 3. 닉네임 중복 체크
+        if (userRepository.existsByNickname(newNickname)) {
+            throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+
+        // 4. 닉네임 업데이트
+        user.updateNickname(newNickname);
+    }
 }

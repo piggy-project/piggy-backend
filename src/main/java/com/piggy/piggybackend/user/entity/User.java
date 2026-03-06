@@ -27,10 +27,10 @@ public class User {
     @Column(length = 128)
     private String password; // LOCAL만 사용
 
-    @Column( length = 20)
+    @Column(length = 20)
     private String name;
 
-    @Column( length = 50)
+    @Column(length = 12)  // DB 제약조건: 12자 이내
     private String nickname;
 
     @Column
@@ -41,19 +41,22 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private Provider provider; // 소셜로그인
-
+    private Provider provider;
 
     @Column(nullable = true)
-    private String providerId; // 소셜 고유 ID
+    private String providerId;
 
     public void updateSocialInfo(String nickname, LocalDate birth, String phoneNum) {
         this.nickname = nickname;
         this.birth = birth;
         this.phoneNum = phoneNum;
     }
+
     public void updatePassword(String encodedPassword) {
         this.password = encodedPassword;
     }
-}
 
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+}

@@ -153,5 +153,9 @@ management:
     health:
       show-details: always
 
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
+
 app:
   frontend-url: https://piggys.mooo.com

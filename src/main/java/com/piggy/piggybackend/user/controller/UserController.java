@@ -17,7 +17,8 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
-    //회원가입
+
+    // 회원가입
     @PostMapping("/sign-up")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<String> signUp(
@@ -27,6 +28,7 @@ public class UserController {
 
         return ApiResponse.success("가입이 완료되었습니다.");
     }
+
     // 로그인
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(
@@ -37,7 +39,7 @@ public class UserController {
         return ResponseEntity.status(201).body(response);
     }
 
-    //이메일 중복체크
+    // 이메일 중복체크
     @PostMapping("/check-email")
     public ResponseEntity<EmailCheckResponse> checkEmail(
             @RequestParam String email
@@ -45,7 +47,8 @@ public class UserController {
         EmailCheckResponse response = userService.checkEmail(email);
         return ResponseEntity.ok(response);
     }
-    //닉네임 중복체크
+
+    // 닉네임 중복체크
     @PostMapping("/check-nickname")
     public ResponseEntity<EmailCheckResponse> checkNickname(
             @RequestParam String nickname
@@ -53,24 +56,24 @@ public class UserController {
         EmailCheckResponse response = userService.checkNickname(nickname);
         return ResponseEntity.ok(response);
     }
+
     // 내 정보 조회
     @GetMapping("/me")
     public ResponseEntity<UserInfoResponse> getMyInfo(
             @AuthenticationPrincipal String email
     ) {
-        // 1. 토큰에서 추출한 email로 유저 조회
         UserInfoResponse userInfo = userService.getMyInfo(email);
-
         return ResponseEntity.ok(userInfo);
     }
 
-    //비밀번호 재설정
+    // 비밀번호 재설정 요청
     @PostMapping("/password/reset-request")
     public ResponseEntity<?> requestReset(@RequestParam String email) {
         userService.createResetToken(email);
         return ResponseEntity.ok("이메일 발송 완료");
     }
 
+    // 비밀번호 재설정
     @PostMapping("/password/reset")
     public ResponseEntity<?> resetPassword(
             @RequestBody PasswordResetDto dto
@@ -78,21 +81,33 @@ public class UserController {
         userService.resetPassword(dto.getToken(), dto.getNewPassword());
         return ResponseEntity.ok("비밀번호 변경 완료");
     }
+
     // 소셜 로그인 추가 정보 업데이트
     @PatchMapping("/additional-info")
     public ApiResponse<String> updateAdditionalInfo(
-            @AuthenticationPrincipal String email, // 👈 토큰에서 이메일 추출
+            @AuthenticationPrincipal String email,
             @RequestBody AdditionalInfoRequest request) {
 
         userService.updateAdditionalInfo(email, request);
 
         return ApiResponse.success("추가 정보 입력이 완료되었습니다.");
     }
-    // UserController.java
 
+    // 소셜 가입 취소
     @DeleteMapping("/social-cancel")
     public ApiResponse<String> cancelSocialSignup(@AuthenticationPrincipal String email) {
         userService.deleteUnfinishedUser(email);
         return ApiResponse.success("소셜 가입이 취소되고 데이터가 삭제되었습니다.");
+    }
+
+    // 닉네임 변경
+    @PatchMapping("/nickname")
+    public ResponseEntity<ApiResponse<String>> updateNickname(
+            @AuthenticationPrincipal String email,
+            @Valid @RequestBody NicknameUpdateRequest request) {
+
+        userService.updateNickname(email, request);
+
+        return ResponseEntity.ok(ApiResponse.success("닉네임이 변경되었습니다."));
     }
 }
