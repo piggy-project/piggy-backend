@@ -1,6 +1,8 @@
 package com.piggy.piggybackend.auth.service;
 
 import com.piggy.piggybackend.auth.dto.*;
+import com.piggy.piggybackend.global.exception.CustomException;
+import com.piggy.piggybackend.global.exception.ErrorCode;
 import com.piggy.piggybackend.user.entity.Provider;
 import com.piggy.piggybackend.user.entity.User;
 import com.piggy.piggybackend.user.repository.UserRepository;
@@ -44,13 +46,13 @@ public class CustomOAuth2UserService
                 .orElseGet(() -> {
                     userRepository.findByEmail(userInfo.getEmail())
                             .ifPresent(u -> {
-                                throw new IllegalStateException(
-                                        "이미 다른 소셜 계정으로 가입된 이메일입니다. 기존 방식으로 로그인해주세요."
-                                );
+                                String korProvider = getProviderKorName(u.getProvider());
+                                String message = String.format("이미 %s로 가입된 계정입니다. %s로 로그인하시겠습니까?", korProvider, korProvider);
+
+                                throw new CustomException(ErrorCode.DUPLICATE_EMAIL, message);
                             });
                     return registerUser(provider, userInfo);
                 });
-
 
         // 2. userNameAttributeName을 동적으로 할당
         return new DefaultOAuth2User(
@@ -102,5 +104,15 @@ public class CustomOAuth2UserService
 
     private String generateRandomNickname() {
         return "U" + UUID.randomUUID().toString().substring(0, 6);
+    }
+    private String getProviderKorName(Provider provider) {
+        if (provider == null) return "알 수 없는 계정";
+        return switch (provider) {
+            case KAKAO -> "카카오";
+            case NAVER -> "네이버";
+            case GOOGLE -> "구글";
+            case LOCAL -> "일반 이메일";
+            default -> provider.name();
+        };
     }
 }
