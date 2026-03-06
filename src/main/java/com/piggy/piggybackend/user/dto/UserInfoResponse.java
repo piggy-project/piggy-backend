@@ -10,7 +10,6 @@ public class UserInfoResponse {
     private String nickname;
     private String name;
 
-
     // Entity -> DTO 변환 생성자
     public UserInfoResponse(User user) {
         this.id = user.getId();
