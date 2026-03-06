@@ -11,7 +11,8 @@ public class FoodResponse {
     private String name;
     private String category;
     private Double rating;
-    private String desc; // 프론트엔드 요청에 맞춘 필드명
+    private String desc;
+    private String image;
 
     // Entity -> DTO 변환 생성자
     public FoodResponse(RegionalFood entity) {
@@ -20,5 +21,6 @@ public class FoodResponse {
         this.category = entity.getCategory();
         this.rating = entity.getRating();
         this.desc = entity.getDescription();
+        this.image = entity.getImageUrl();
     }
 }
