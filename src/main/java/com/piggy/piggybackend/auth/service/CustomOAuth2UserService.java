@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -49,7 +51,7 @@ public class CustomOAuth2UserService
                                 String korProvider = getProviderKorName(u.getProvider());
                                 String message = String.format("이미 %s로 가입된 계정입니다. %s로 로그인하시겠습니까?", korProvider, korProvider);
 
-                                throw new CustomException(ErrorCode.DUPLICATE_EMAIL, message);
+                                throw new OAuth2AuthenticationException(new OAuth2Error("duplicate_email"), message);
                             });
                     return registerUser(provider, userInfo);
                 });

@@ -1,6 +1,7 @@
 package com.piggy.piggybackend.global.config;
 
 import com.piggy.piggybackend.auth.service.CustomOAuth2UserService;
+import com.piggy.piggybackend.auth.service.OAuth2FailureHandler;
 import com.piggy.piggybackend.auth.service.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +25,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
+    private final OAuth2FailureHandler oAuth2FailureHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -65,6 +67,7 @@ public class SecurityConfig {
                                 user.userService(customOAuth2UserService)
                         )
                         .successHandler(oAuth2SuccessHandler)
+                        .failureHandler(oAuth2FailureHandler)
                 )
 
                 .addFilterBefore(
