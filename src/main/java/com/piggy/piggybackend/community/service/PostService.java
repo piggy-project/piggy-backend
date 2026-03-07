@@ -77,7 +77,7 @@ public class PostService {
         // DTO 변환
         PostResponseDto dto = convertToDto(post);
 
-        // 📍 상세 조회 시에도 좋아요 여부를 체크해서 넣어줍니다.
+        // 상세 조회 시에도 좋아요 여부를 체크해서 넣어줍니다.
         if (user != null) {
             boolean isLiked = postLikeRepository.findByPostAndUser(post, user).isPresent();
             dto.setLiked(isLiked); // DTO에 setLiked 메서드가 있어야 합니다.
