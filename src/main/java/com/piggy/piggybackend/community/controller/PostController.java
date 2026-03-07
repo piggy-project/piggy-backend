@@ -1,6 +1,7 @@
 package com.piggy.piggybackend.community.controller;
 
 import com.piggy.piggybackend.community.dto.PostCreateRequestDto;
+import com.piggy.piggybackend.community.dto.PostLikeResponseDto;
 import com.piggy.piggybackend.community.dto.PostResponseDto;
 import com.piggy.piggybackend.community.service.PostService;
 import com.piggy.piggybackend.global.util.LoginUser;
@@ -36,8 +37,10 @@ public class PostController {
 
     // 3. 게시글 상세 조회
     @GetMapping("/{postId}")
-    public ResponseEntity<PostResponseDto> getPostDetail(@PathVariable Long postId) {
-        return ResponseEntity.ok(postService.getPostDetail(postId));
+    public ResponseEntity<PostResponseDto> getPostDetail(
+            @PathVariable Long postId,
+            @LoginUser User user) {
+        return ResponseEntity.ok(postService.getPostDetail(postId, user));
     }
 
     // 4. 게시글 삭제
@@ -47,5 +50,12 @@ public class PostController {
             @LoginUser User user) {
         postService.deletePost(postId, user);
         return ResponseEntity.noContent().build();
+    }
+    // 5. 좋아요 토글
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<PostLikeResponseDto> toggleLike(
+            @PathVariable Long postId,
+            @LoginUser User user) {
+        return ResponseEntity.ok(postService.toggleLike(postId, user));
     }
 }

@@ -66,4 +66,15 @@ public class Post {
         this.title = title;
         this.content = content;
     }
+    // 좋아요 증가
+    public void incrementLikeCount() {
+        this.likeCount++;
+    }
+
+    // 좋아요 감소 (0 이하로 내려가지 않게 방어)
+    public void decrementLikeCount() {
+        if (this.likeCount > 0) {
+            this.likeCount--;
+        }
+    }
 }
