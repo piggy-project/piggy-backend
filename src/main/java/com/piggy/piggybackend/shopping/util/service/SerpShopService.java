@@ -31,14 +31,13 @@ public class SerpShopService {
         String googleDomain;
 
         if ("THB".equals(currencyCode)) {
-            gl = "th";
-            googleDomain = "google.co.th";
+            gl = "th"; googleDomain = "google.co.th";
         } else if ("VND".equals(currencyCode)) {
-            gl = "vn";
-            googleDomain = "google.com.vn";
+            gl = "vn"; googleDomain = "google.com.vn";
+        } else if ("CNY".equals(currencyCode)) {
+            gl = "cn"; googleDomain = "google.com"; // 중국 본토는 google.com 기반 gl=cn 사용
         } else {
-            gl = "ph";
-            googleDomain = "google.com.ph";
+            gl = "ph"; googleDomain = "google.com.ph";
         }
 
         String url = UriComponentsBuilder.fromHttpUrl("https://serpapi.com/search")

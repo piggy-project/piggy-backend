@@ -60,13 +60,13 @@ public class ComparisonService {
             if ("JPY".equals(currencyCode)) {
                 rakutenResult = rakutenService.searchItems(query);
             }
-            // 동남아 3국 (VND 추가됨)
-            else if (List.of("THB", "PHP", "VND").contains(currencyCode)) {
-                serpResults = serpShopService.getRegionalProducts(query, currencyCode);
-            }
-            // 미국 및 유럽
-            else if ("USD".equals(currencyCode) || "EUR".equals(currencyCode)) {
+            // 미국, 유럽, 영국, 호주를 eBay 그룹으로 묶습니다.
+            else if (List.of("USD", "EUR", "GBP", "AUD").contains(currencyCode)) {
                 serpResults = ebayShopService.getEbayProducts(query, currencyCode);
+            }
+            // 동남아 3국 + 중국을 SerpApi 그룹으로 처리합니다.
+            else if (List.of("THB", "PHP", "VND", "CNY").contains(currencyCode)) {
+                serpResults = serpShopService.getRegionalProducts(query, currencyCode);
             }
 
             // 3. 환율 데이터 확인
@@ -117,7 +117,7 @@ public class ComparisonService {
     // 인기 아이템(캐시) 관련 로직(하루에 한번 캐시 갱신, api호출 아껴야함)
     @Scheduled(cron = "0 0 0 * * *")
     public void refreshAllCurrenciesCache() {
-        List<String> currencies = List.of("JPY", "THB", "PHP", "VND", "USD", "EUR");
+        List<String> currencies = List.of("JPY", "CNY", "USD", "VND", "PHP", "THB", "EUR", "AUD", "GBP");
         for (String code : currencies) {
             refreshPopularItemsCache(code);
         }

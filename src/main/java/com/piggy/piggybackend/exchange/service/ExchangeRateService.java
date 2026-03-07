@@ -44,17 +44,15 @@ public class ExchangeRateService {
     private static final String REDIS_LOW_RATES = "exchange:low";
 
     private static final Map<String, String> currencyMap = Map.ofEntries(
-            Map.entry("USD", "미국 달러"), Map.entry("EUR", "유럽연합 유로"),
-            Map.entry("JPY", "일본 엔"), Map.entry("CNY", "중국 위안"),
-            Map.entry("HKD", "홍콩 달러"), Map.entry("GBP", "영국 파운드"),
-            Map.entry("CHF", "스위스 프랑"), Map.entry("CAD", "캐나다 달러"),
-            Map.entry("AUD", "호주 달러"), Map.entry("NZD", "뉴질랜드 달러"),
-            Map.entry("SGD", "싱가포르 달러"), Map.entry("THB", "태국 바트"),
-            Map.entry("VND", "베트남 동"), Map.entry("PHP", "필리핀 페소"),
-            Map.entry("MYR", "말레이시아 링깃"), Map.entry("TWD", "대만 달러"),
-            Map.entry("SAR", "사우디 리얄"), Map.entry("AED", "아랍에미리트 디르함"),
-            Map.entry("KWD", "쿠웨이트 디나르"), Map.entry("BHD", "바레인 디나르"),
-            Map.entry("IDR", "인도네시아 루피아"), Map.entry("SEK", "스웨덴 크로나")
+            Map.entry("JPY", "일본 엔"),
+            Map.entry("CNY", "중국 위안"),
+            Map.entry("USD", "미국 달러"),
+            Map.entry("VND", "베트남 동"),
+            Map.entry("PHP", "필리핀 페소"),
+            Map.entry("THB", "태국 바트"),
+            Map.entry("EUR", "유럽연합 유로"), // 독일, 프랑스 공통
+            Map.entry("AUD", "호주 달러"),
+            Map.entry("GBP", "영국 파운드")
     );
 
     @Value("${EXCHANGE_RATE_API_KEY}")
