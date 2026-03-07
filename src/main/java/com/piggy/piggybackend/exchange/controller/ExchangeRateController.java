@@ -18,12 +18,6 @@ public class ExchangeRateController {
 
     private final ExchangeRateService exchangeRateService;
 
-    // 전체 환율 조회
-    @GetMapping("/rates")
-    public ResponseEntity<List<ExchangeRateResponseDto>> getLatestRates() {
-        return ResponseEntity.ok(exchangeRateService.getLatestRates());
-    }
-
     // 상세 환율 조회
     @GetMapping("/detail/{code}")
     public ResponseEntity<ExchangeDetailResponseDto> getExchangeDetail(
@@ -38,7 +32,7 @@ public class ExchangeRateController {
         return ResponseEntity.ok(exchangeRateService.getExchangeHistory(code));
     }
 
-    // 환율 랭킹 조회
+    // 환율 리스트 및 랭킹 조회
     // sort: RISE(급상승), FALL(급하락), HIGH(환율 높은순), LOW(환율 낮은순)
     // 예시: GET /api/exchange/ranking?sort=RISE
     @GetMapping("/ranking")

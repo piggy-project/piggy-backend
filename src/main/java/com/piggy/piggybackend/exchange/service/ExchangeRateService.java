@@ -155,34 +155,7 @@ public class ExchangeRateService {
         log.info("[{}] Redis 데이터를 기반으로 전일 마감 환율 DB 저장 완료", yesterday);
     }
 
-    // 2. 전체 환율 조회 (Redis 기반)
-    public List<ExchangeRateResponseDto> getLatestRates() {
-        Map<Object, Object> rates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
-
-        if (rates.isEmpty()) {
-            updateLiveRatesCache();
-            rates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
-        }
-
-        if (rates.isEmpty()) {
-            throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
-        }
-
-        String today = LocalDate.now(ZoneId.of("Asia/Seoul")).toString();
-        String updateTime = redisTemplate.opsForValue().get(REDIS_UPDATE_TIME);
-
-        return rates.entrySet().stream()
-                .map(e -> ExchangeRateResponseDto.builder()
-                        .curUnit(e.getKey().toString())
-                        .curNm(currencyMap.get(e.getKey().toString()))
-                        .rate(Double.parseDouble(e.getValue().toString()))
-                        .date(today)
-                        .time(updateTime)
-                        .build())
-                .collect(Collectors.toList());
-    }
-
-    // 3. 상세 환율 조회 (Redis 기반)
+    // 상세 환율 조회 (Redis 기반)
     @Transactional(readOnly = true)
     public ExchangeDetailResponseDto getExchangeDetail(String code) {
         if (!currencyMap.containsKey(code)) {
@@ -227,7 +200,7 @@ public class ExchangeRateService {
                 .build();
     }
 
-    // 4. 환율 랭킹 조회
+    // 환율 리스트 조회 및 정렬
     // sort: RISE(급상승), FALL(급하락), HIGH(환율 높은순), LOW(환율 낮은순)
     @Transactional(readOnly = true)
     public List<ExchangeRankingResponseDto> getExchangeRanking(String sort) {
