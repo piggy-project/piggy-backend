@@ -36,8 +36,17 @@ public class ComparisonService {
     private final EbayShopService ebayShopService;
 
     private static final String CACHE_KEY_PREFIX = "popular_items_cache:";
+    private static final String SEARCH_CACHE_PREFIX = "search_results_cache:";
 
     public ComparisonResponse comparePrices(String query, String currencyCode) {
+        String searchCacheKey = SEARCH_CACHE_PREFIX + currencyCode + ":" + query;
+        ComparisonResponse cachedResponse = getCachedResponse(searchCacheKey);
+
+        if (cachedResponse != null) {
+            log.info("API 호출 없이 결과 반환: {}", query);
+            return cachedResponse;
+        }
+
         try {
             rankingService.incrementKeywordCount(query, currencyCode);
 
@@ -68,13 +77,17 @@ public class ComparisonService {
             double exchangeRate = exchangeDetail.getCurrentRate();
 
             // 4. 결과 조립
-            return ComparisonResponse.builder()
+            ComparisonResponse response = ComparisonResponse.builder()
                     .naverResults(naverResult)
                     .rakutenResults(rakutenResult)
-                    .serpResults(serpResults) // 명칭 일치
+                    .serpResults(serpResults)
                     .exchangeRate(exchangeRate)
                     .currencyCode(currencyCode)
                     .build();
+
+            saveResponseToCache(searchCacheKey, response, 60);
+
+            return response;
 
         } catch (CustomException e) {
             throw e;
@@ -101,8 +114,8 @@ public class ComparisonService {
         }
     }
 
-    // 인기 아이템(캐시) 관련 로직
-    @Scheduled(cron = "0 0,30 * * * *")
+    // 인기 아이템(캐시) 관련 로직(하루에 한번 캐시 갱신, api호출 아껴야함)
+    @Scheduled(cron = "0 0 0 * * *")
     public void refreshAllCurrenciesCache() {
         List<String> currencies = List.of("JPY", "THB", "PHP", "VND", "USD", "EUR");
         for (String code : currencies) {
@@ -113,11 +126,13 @@ public class ComparisonService {
     public void refreshPopularItemsCache(String currencyCode) {
         log.info("{} 인기 아이템 캐시 갱신 시작", currencyCode);
         try {
-            List<String> topKeywords = rankingService.getTopKeywords(currencyCode, 6);
+            //키워드 줄여서 결과값 3개만 가져오기(serf는 무료 할당량이 적음)
+            int limit = (List.of("THB", "PHP", "VND").contains(currencyCode)) ? 2 : 6;
+            List<String> topKeywords = rankingService.getTopKeywords(currencyCode, limit);
 
             // 검색어가 하나도 없는 신규 국가의 경우 JPY나 전체 인기 키워드를 Fallback으로 사용 가능
             if (topKeywords.isEmpty()) {
-                topKeywords = rankingService.getTopKeywords("ALL", 6);
+                topKeywords = rankingService.getTopKeywords("ALL", limit);
             }
 
             var exchangeDetail = exchangeRateService.getExchangeDetail(currencyCode);
@@ -168,7 +183,7 @@ public class ComparisonService {
             }).filter(Objects::nonNull).collect(Collectors.toList());
 
             if (!items.isEmpty()) {
-                saveToCache(CACHE_KEY_PREFIX + currencyCode, items, 35);
+                saveToCache(CACHE_KEY_PREFIX + currencyCode, items, 1500);
             }
         } catch (Exception e) {
             log.error("{} 캐시 갱신 중 에러: ", currencyCode, e);
@@ -184,6 +199,22 @@ public class ComparisonService {
         } catch (Exception e) {
             log.error("Redis 읽기 에러: ", e);
             return null;
+        }
+    }
+    private ComparisonResponse getCachedResponse(String key) {
+        try {
+            String json = redisTemplate.opsForValue().get(key);
+            return (json != null) ? objectMapper.readValue(json, ComparisonResponse.class) : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    private void saveResponseToCache(String key, ComparisonResponse response, int minutes) {
+        try {
+            String json = objectMapper.writeValueAsString(response);
+            redisTemplate.opsForValue().set(key, json, minutes, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.error("검색 결과 캐시 저장 에러: ", e);
         }
     }
 
