@@ -63,8 +63,10 @@ public class SerpShopService {
 
                 String source = item.path("source").asText().toLowerCase();
 
-                if (source.contains("shopee") || source.contains("lazada")) {
-                    // link 필드가 없으면 product_link 필드를 시도합니다.
+                boolean isSouthEastAsia = List.of("THB", "PHP", "VND").contains(currencyCode);
+                boolean isAllowedSource = !isSouthEastAsia || (source.contains("shopee") || source.contains("lazada"));
+
+                if (isAllowedSource) {
                     String itemLink = item.path("link").asText();
                     if (itemLink.isEmpty() || itemLink.equals("#")) {
                         itemLink = item.path("product_link").asText("#");
@@ -74,7 +76,7 @@ public class SerpShopService {
                             .source(item.path("source").asText())
                             .title(item.path("title").asText())
                             .price(item.path("extracted_price").asDouble())
-                            .link(itemLink) // 보완된 링크 저장
+                            .link(itemLink)
                             .thumbnail(item.path("thumbnail").asText())
                             .build());
                 }

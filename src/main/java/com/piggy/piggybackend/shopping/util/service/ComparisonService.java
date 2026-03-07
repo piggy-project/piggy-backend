@@ -127,7 +127,7 @@ public class ComparisonService {
         log.info("{} 인기 아이템 캐시 갱신 시작", currencyCode);
         try {
             //키워드 줄여서 결과값 3개만 가져오기(serf는 무료 할당량이 적음)
-            int limit = (List.of("THB", "PHP", "VND").contains(currencyCode)) ? 2 : 6;
+            int limit = (List.of("THB", "PHP", "VND", "CNY").contains(currencyCode)) ? 2 : 6;
             List<String> topKeywords = rankingService.getTopKeywords(currencyCode, limit);
 
             // 검색어가 하나도 없는 신규 국가의 경우 JPY나 전체 인기 키워드를 Fallback으로 사용 가능
