@@ -1,13 +1,11 @@
 package com.piggy.piggybackend.community.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -21,4 +19,5 @@ public class PostResponseDto {
     private String authorNickname;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private boolean isLiked;
 }

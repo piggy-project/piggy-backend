@@ -48,12 +48,19 @@ public class PostService {
 
     // 2. 목록 조회 (Redis 데이터 반영)
     @Transactional(readOnly = true)
-    public List<PostResponseDto> getPosts(String category, String search) {
+    public List<PostResponseDto> getPosts(String category, String search, User user) {
         List<Post> posts = (search == null || search.isBlank())
                 ? postRepository.findAllByCategoryOrderByCreatedAtDesc(category)
                 : postRepository.searchByCategoryAndKeyword(category, search);
 
-        return posts.stream().map(this::convertToDto).collect(Collectors.toList());
+        return posts.stream().map(post -> {
+            PostResponseDto dto = convertToDto(post);
+            if (user != null) {
+                boolean liked = postLikeRepository.findByPostAndUser(post, user).isPresent();
+                dto.setLiked(liked);
+            }
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     // 3. 상세 조회 (Redis 데이터 반영)
@@ -62,12 +69,21 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
-        // 조회수 중복 방지 로직
+        // 조회수 증가 로직 (로그인 유저 중복 방지 포함)
         if (user != null) {
             handleViewCount(postId, user.getId(), post);
         }
 
-        return convertToDto(post);
+        // DTO 변환
+        PostResponseDto dto = convertToDto(post);
+
+        // 📍 상세 조회 시에도 좋아요 여부를 체크해서 넣어줍니다.
+        if (user != null) {
+            boolean isLiked = postLikeRepository.findByPostAndUser(post, user).isPresent();
+            dto.setLiked(isLiked); // DTO에 setLiked 메서드가 있어야 합니다.
+        }
+
+        return dto;
     }
     private void handleViewCount(Long postId, Long userId, Post post) {
         String viewKey = VIEW_RECORD_KEY + postId + ":" + userId;

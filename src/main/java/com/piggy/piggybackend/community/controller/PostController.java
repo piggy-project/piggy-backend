@@ -31,8 +31,9 @@ public class PostController {
     @GetMapping
     public ResponseEntity<List<PostResponseDto>> getPosts(
             @RequestParam String category,
-            @RequestParam(required = false, defaultValue = "") String search) {
-        return ResponseEntity.ok(postService.getPosts(category, search));
+            @RequestParam(required = false, defaultValue = "") String search,
+            @LoginUser User user) {
+        return ResponseEntity.ok(postService.getPosts(category, search, user));
     }
 
     // 3. 게시글 상세 조회
