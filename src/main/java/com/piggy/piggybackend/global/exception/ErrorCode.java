@@ -24,7 +24,12 @@ public enum ErrorCode {
 
     SHOPPING_API_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "ShoppingApiError", "쇼핑몰 검색 API 호출 중 문제가 발생했습니다."),
     CACHE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CacheError", "데이터 캐싱 처리 중 문제가 발생했습니다."),
-    EMPTY_SEARCH_RESULT(HttpStatus.NOT_FOUND, "EmptySearchResult", "검색 결과가 존재하지 않습니다.");
+    EMPTY_SEARCH_RESULT(HttpStatus.NOT_FOUND, "EmptySearchResult", "검색 결과가 존재하지 않습니다."),
+
+    // 커뮤니티 관련 에러 코드 추가
+    POST_NOT_FOUND(HttpStatus.NOT_FOUND, "PostNotFound", "존재하지 않는 게시글입니다."),
+    NOT_AUTHORIZED(HttpStatus.FORBIDDEN, "NotAuthorized", "해당 작업을 수행할 권한이 없습니다."),
+    LOGIN_REQUIRED(HttpStatus.UNAUTHORIZED, "LoginRequired", "로그인이 필요합니다.");
     private final HttpStatus httpStatus;
     private final String errorCode;
     private final String message;
