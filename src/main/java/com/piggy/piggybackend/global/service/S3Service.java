@@ -1,15 +1,18 @@
 package com.piggy.piggybackend.global.service;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.piggy.piggybackend.global.exception.CustomException;
+import com.piggy.piggybackend.global.exception.ErrorCode;
+import io.awspring.cloud.s3.S3Template;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.util.UUID;
 
 @Slf4j
@@ -17,38 +20,48 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class S3Service {
 
-    private final AmazonS3 amazonS3; // S3Config에서 만든 Bean을 주입받습니다.
+    private final S3Template s3Template;
 
-    @Value("${cloud.aws.s3.bucket}")
+    @Value("${spring.cloud.aws.s3.bucket}")
     private String bucket;
 
-    public String uploadFile(MultipartFile file) {
-        // 1. 파일 이름 중복 방지를 위해 UUID 생성
-        String fileName = "food/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+    public String upload(MultipartFile file, String dirName) {
+        // 파일 검증
+        if (file.isEmpty() || file.getContentType() == null || !file.getContentType().startsWith("image")) {
+            throw new CustomException(ErrorCode.VALIDATION_ERROR, "올바른 이미지 파일이 아닙니다.");
+        }
+
+        String fileName = dirName + "/" + UUID.randomUUID() + ".jpg";
 
         try {
-            // 2. 메타데이터 설정 (파일 크기 및 타입)
-            ObjectMetadata metadata = new ObjectMetadata();
-            metadata.setContentLength(file.getSize());
-            metadata.setContentType(file.getContentType());
+            // 1. 리사이징 (300x300)
+            BufferedImage resizedImage = Thumbnails.of(file.getInputStream())
+                    .size(300, 300)
+                    .outputFormat("jpg")
+                    .asBufferedImage();
 
-            // 3. S3에 업로드
-            amazonS3.putObject(new PutObjectRequest(bucket, fileName, file.getInputStream(), metadata));
+            // 2. 메모리 내 바이트 변환
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            ImageIO.write(resizedImage, "jpg", os);
+            byte[] bytes = os.toByteArray();
 
-            log.info("S3 파일 업로드 성공: {}", fileName);
-
-            // 4. 업로드된 파일의 전체 URL 반환
-            return amazonS3.getUrl(bucket, fileName).toString();
-
+            // 3. S3 업로드
+            try (InputStream is = new ByteArrayInputStream(bytes)) {
+                var resource = s3Template.upload(bucket, fileName, is);
+                return resource.getURL().toString();
+            }
         } catch (IOException e) {
-            log.error("S3 파일 업로드 에러: {}", e.getMessage());
-            throw new RuntimeException("파일 업로드 중 오류가 발생했습니다.");
+            log.error("S3 업로드 에러: {}", e.getMessage());
+            throw new CustomException(ErrorCode.INTERNAL_SERVER_ERROR, "이미지 업로드에 실패했습니다.");
         }
     }
 
-    // 파일 삭제 로직 (필요 시)
-    public void deleteFile(String fileUrl) {
-        String fileName = fileUrl.split(".com/")[1]; // URL에서 파일명만 추출
-        amazonS3.deleteObject(bucket, fileName);
+    public void delete(String fileUrl) {
+        try {
+            String key = fileUrl.substring(fileUrl.lastIndexOf(".com/") + 5);
+            s3Template.deleteObject(bucket, key);
+        } catch (Exception e) {
+            log.warn("S3 파일 삭제 실패: {}", fileUrl);
+        }
     }
 }

@@ -3,13 +3,15 @@ package com.piggy.piggybackend.user.controller;
 import com.piggy.piggybackend.global.response.ApiResponse;
 import com.piggy.piggybackend.user.dto.*;
 import com.piggy.piggybackend.user.service.UserService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
@@ -101,6 +103,7 @@ public class UserController {
     }
 
     // 닉네임 변경
+    @SecurityRequirement(name = "bearerAuth")
     @PatchMapping("/nickname")
     public ResponseEntity<ApiResponse<String>> updateNickname(
             @AuthenticationPrincipal String email,
@@ -109,5 +112,26 @@ public class UserController {
         userService.updateNickname(email, request);
 
         return ResponseEntity.ok(ApiResponse.success("닉네임이 변경되었습니다."));
+    }
+
+    @SecurityRequirement(name = "bearerAuth")
+    @PatchMapping(value = "/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<String>> updateProfileImage(
+            @AuthenticationPrincipal String email,
+            @RequestPart("image") MultipartFile image) {
+
+        String imageUrl = userService.updateProfileImage(email, image);
+
+        return ResponseEntity.ok(ApiResponse.success(imageUrl));
+    }
+
+    @DeleteMapping("/profile-image")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<String>> deleteProfileImage(
+            @AuthenticationPrincipal String email) {
+
+        userService.deleteProfileImage(email);
+
+        return ResponseEntity.ok(ApiResponse.success("프로필 이미지가 삭제되었습니다."));
     }
 }

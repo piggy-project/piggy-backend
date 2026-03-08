@@ -46,6 +46,14 @@ public class User {
     @Column(nullable = true)
     private String providerId;
 
+
+    @Column(length = 512)
+    private String profileImageUrl;
+
+    public void updateProfileImage(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
     public void updateSocialInfo(String nickname, LocalDate birth, String phoneNum) {
         this.nickname = nickname;
         this.birth = birth;

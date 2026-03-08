@@ -59,6 +59,7 @@ public class SecurityConfig {
                                 "/users/password/**",
                                 "/api/exchange/**",
                                 "/api/v1/shopping/**",
+                                "/api/exchange/simulate",
                                 "/api/v1/ocr/**",
                                 "/food/**"
                         ).permitAll()

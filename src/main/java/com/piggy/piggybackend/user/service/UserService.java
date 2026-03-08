@@ -2,6 +2,7 @@ package com.piggy.piggybackend.user.service;
 
 import com.piggy.piggybackend.global.exception.CustomException;
 import com.piggy.piggybackend.global.exception.ErrorCode;
+import com.piggy.piggybackend.global.service.S3Service;
 import com.piggy.piggybackend.global.util.CryptoUtil;
 import com.piggy.piggybackend.global.util.JwtUtil;
 import com.piggy.piggybackend.user.dto.*;
@@ -11,17 +12,14 @@ import com.piggy.piggybackend.user.entity.User;
 import com.piggy.piggybackend.user.repository.PasswordResetTokenRepository;
 import com.piggy.piggybackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.mail.MailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
-import java.util.regex.Pattern;
-
 
 
 @Service
@@ -35,6 +33,8 @@ public class UserService {
     private final JwtUtil jwtUtil;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final MailService mailService;
+    private final S3Service s3Service;
+    private String defaultProfileImage;
 
     public void signUp(UserCreateRequest request) {
 
@@ -262,5 +262,38 @@ public class UserService {
 
         // 4. 닉네임 업데이트
         user.updateNickname(newNickname);
+    }
+
+    //S3 프로필사진
+    @Transactional
+    public String updateProfileImage(String email, MultipartFile image) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 기존 프사가 있으면 S3에서 삭제
+        if (user.getProfileImageUrl() != null) {
+            s3Service.delete(user.getProfileImageUrl());
+        }
+
+        // 새 프사 업로드 및 DB 업데이트
+        String imageUrl = s3Service.upload(image, "profiles");
+        user.updateProfileImage(imageUrl);
+
+        return imageUrl;
+    }
+
+    //프로필사진 삭제
+    @Transactional
+    public void deleteProfileImage(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 1. S3에 실제 파일이 있다면 삭제
+        if (user.getProfileImageUrl() != null) {
+            s3Service.delete(user.getProfileImageUrl());
+        }
+
+        // 2. DB 경로를 null로 업데이트
+        user.updateProfileImage(null);
     }
 }
