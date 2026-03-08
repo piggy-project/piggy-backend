@@ -20,6 +20,8 @@ public class PostResponseDto {
     private String authorNickname;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    @JsonProperty("isLiked")
     private boolean isLiked;
 
     @JsonProperty("isAuthor")

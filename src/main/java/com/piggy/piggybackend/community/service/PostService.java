@@ -69,6 +69,7 @@ public class PostService {
     // 3. 상세 조회 (Redis 데이터 반영)
     @Transactional
     public PostResponseDto getPostDetail(Long postId, User user) {
+        System.out.println(user);
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
