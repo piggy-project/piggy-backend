@@ -215,6 +215,7 @@ public class PostService {
                 .category(post.getCategory())
                 .viewCount(getViewCount(post.getId(), post.getViewCount()))
                 .likeCount(getLikeCount(post.getId(), post.getLikeCount()))
+                .commentCount(post.getCommentCount())
                 .authorNickname(post.getUser().getNickname())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
