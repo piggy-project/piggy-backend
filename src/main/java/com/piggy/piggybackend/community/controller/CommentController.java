@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/community")
 @RequiredArgsConstructor
@@ -23,6 +25,14 @@ public class CommentController {
             @RequestBody CommentRequestDto dto,
             @LoginUser User user) {
         return ResponseEntity.ok(commentService.createComment(postId, dto, user));
+    }
+
+    // 댓글 목록 조회
+    @GetMapping("/{postId}/comments")
+    public ResponseEntity<List<CommentResponseDto>> getComments(
+            @PathVariable Long postId,
+            @LoginUser User user) {
+        return ResponseEntity.ok(commentService.getComments(postId, user));
     }
 
     // 댓글 삭제
