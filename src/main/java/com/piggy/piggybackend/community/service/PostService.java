@@ -12,6 +12,7 @@ import com.piggy.piggybackend.global.exception.ErrorCode;
 import com.piggy.piggybackend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +29,9 @@ public class PostService {
     private final StringRedisTemplate redisTemplate;
 
     private static final String LIKE_COUNT_KEY = "post:like:count:";
-    private static final String VIEW_RECORD_KEY = "post:view:";
+    private static final String LIKE_USERS_KEY = "post:like:users:";
+    private static final String VIEW_RECORD_KEY = "post:view:record:";
+    private static final String VIEW_COUNT_KEY = "post:view:count:";
 
     // 1. 글 저장 (기존과 동일)
     @Transactional
@@ -56,8 +59,7 @@ public class PostService {
         return posts.stream().map(post -> {
             PostResponseDto dto = convertToDto(post);
             if (user != null) {
-                boolean liked = postLikeRepository.findByPostAndUser(post, user).isPresent();
-                dto.setLiked(liked);
+                dto.setLiked(isUserLiked(post.getId(), user.getId()));
             }
             return dto;
         }).collect(Collectors.toList());
@@ -77,25 +79,29 @@ public class PostService {
         // DTO 변환
         PostResponseDto dto = convertToDto(post);
 
-        // 상세 조회 시에도 좋아요 여부를 체크해서 넣어줍니다.
+        // 상세 조회 시 redis 확인
         if (user != null) {
-            boolean isLiked = postLikeRepository.findByPostAndUser(post, user).isPresent();
-            dto.setLiked(isLiked); // DTO에 setLiked 메서드가 있어야 합니다.
+            dto.setLiked(isUserLiked(postId, user.getId()));
         }
 
         return dto;
     }
     private void handleViewCount(Long postId, Long userId, Post post) {
-        String viewKey = VIEW_RECORD_KEY + postId + ":" + userId;
+        String recordKey = VIEW_RECORD_KEY + postId + ":" + userId;
+        String countKey = VIEW_COUNT_KEY + postId;
 
-        // 1. Redis에 해당 유저의 조회 기록이 있는지 확인
-        if (Boolean.FALSE.equals(redisTemplate.hasKey(viewKey))) {
-            // 2. 기록이 없다면 조회수 증가
-            post.incrementViewCount();
+        // 중복 조회 확인
+        if (!redisTemplate.hasKey(recordKey)) {
+            // 처음 보는 유저라면 Redis의 전체 조회수 키를 1 증가시킴 (DB는 건드리지 않음!)
+            if (!redisTemplate.hasKey(countKey)) {
+                // Redis에 키가 없으면 현재 DB 값을 가져와서 초기화 후 증가
+                redisTemplate.opsForValue().set(countKey, String.valueOf(post.getViewCount() + 1), java.time.Duration.ofDays(1));
+            } else {
+                redisTemplate.opsForValue().increment(countKey);
+            }
 
-            // 3. Redis에 기록 저장 (24시간 동안 유지)
-            // 24시간이 지나면 다시 조회수가 올라갈 수 있게 설정 (보통의 커뮤니티 방식)
-            redisTemplate.opsForValue().set(viewKey, "v", java.time.Duration.ofDays(1));
+            // 중복 방지 기록 저장 (24시간)
+            redisTemplate.opsForValue().set(recordKey, "v", java.time.Duration.ofDays(1));
         }
     }
 
@@ -112,10 +118,13 @@ public class PostService {
 
         // 삭제 시 Redis 키도 함께 삭제
         redisTemplate.delete(LIKE_COUNT_KEY + postId);
+        redisTemplate.delete(LIKE_USERS_KEY + postId);
+        redisTemplate.delete(VIEW_COUNT_KEY + postId);
+
         postRepository.delete(post);
     }
 
-    // 5. 좋아요 토글 (DB와 Redis 동시 업데이트)
+    // 5. 좋아요 토글 (DB 부하 경감 방식)
     @Transactional
     public PostLikeResponseDto toggleLike(Long postId, User user) {
         if (user == null) throw new CustomException(ErrorCode.LOGIN_REQUIRED);
@@ -123,64 +132,84 @@ public class PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
-        Optional<PostLike> existingLike = postLikeRepository.findByPostAndUser(post, user);
-        String redisKey = LIKE_COUNT_KEY + postId;
+        String userSetKey = LIKE_USERS_KEY + postId;
+        String countKey = LIKE_COUNT_KEY + postId;
+
+        Long result = redisTemplate.opsForSet().add(userSetKey, user.getId().toString());
 
         boolean isLiked;
-        if (existingLike.isPresent()) {
-            postLikeRepository.delete(existingLike.get());
-            post.decrementLikeCount();
-            decrementRedisCount(redisKey, post.getLikeCount());
-            isLiked = false;
-        } else {
-            postLikeRepository.save(PostLike.builder().post(post).user(user).build());
-            post.incrementLikeCount();
-            incrementRedisCount(redisKey, post.getLikeCount());
+        if (result != null && result > 0) {
+            // 1이 반환되면 새로 추가된 것 -> 좋아요
+            redisTemplate.opsForValue().increment(countKey);
             isLiked = true;
+        } else {
+            // 0이 반환되면 이미 있었던 것 -> 좋아요 취소
+            redisTemplate.opsForSet().remove(userSetKey, user.getId().toString());
+            redisTemplate.opsForValue().decrement(countKey);
+            isLiked = false;
         }
-
         return new PostLikeResponseDto(isLiked, getLikeCount(postId, post.getLikeCount()));
     }
-
-    // --- Redis 헬퍼 메서드 ---
-
-    private void incrementRedisCount(String key, Long dbCount) {
-        if (Boolean.FALSE.equals(redisTemplate.hasKey(key))) {
-            redisTemplate.opsForValue().set(key, String.valueOf(dbCount), java.time.Duration.ofDays(1));
-        } else {
-            redisTemplate.opsForValue().increment(key);
-        }
+    // 정각마다 조회수 & 좋아요 수를 DB에 일괄 업데이트
+    @Scheduled(cron = "0 0 * * * *")
+    @Transactional
+    public void syncRedisToDb() {
+        // 1. 조회수 동기화
+        syncCounts(VIEW_COUNT_KEY, (post, count) -> post.setViewCount(count));
+        // 2. 좋아요 수 동기화
+        syncCounts(LIKE_COUNT_KEY, (post, count) -> post.setLikeCount(count));
     }
 
-    private void decrementRedisCount(String key, Long dbCount) {
-        if (Boolean.FALSE.equals(redisTemplate.hasKey(key))) {
-            redisTemplate.opsForValue().set(key, String.valueOf(dbCount), java.time.Duration.ofDays(1));
-        } else {
-            String currentVal = redisTemplate.opsForValue().get(key);
-            if (currentVal != null && Long.parseLong(currentVal) > 0) {
-                redisTemplate.opsForValue().decrement(key);
+    // 공통 동기화 로직
+    private void syncCounts(String keyPrefix, java.util.function.BiConsumer<Post, Long> setter) {
+        java.util.Set<String> keys = redisTemplate.keys(keyPrefix + "*");
+        if (keys == null) return;
+
+        for (String key : keys) {
+            Long postId = Long.parseLong(key.replace(keyPrefix, ""));
+            String countStr = redisTemplate.opsForValue().get(key);
+            if (countStr != null) {
+                postRepository.findById(postId).ifPresent(post -> {
+                    setter.accept(post, Long.parseLong(countStr));
+                });
             }
         }
     }
 
+    // --- Redis 헬퍼 메서드 ---
+
+    private boolean isUserLiked(Long postId, Long userId) {
+        // Redis Set에 해당 유저가 있는지 확인
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(LIKE_USERS_KEY + postId, userId.toString()));
+    }
     private Long getLikeCount(Long postId, Long dbCount) {
         String key = LIKE_COUNT_KEY + postId;
         String val = redisTemplate.opsForValue().get(key);
+        if (val == null) {
+            // Redis에 없으면 DB 값으로 초기화 (이후에는 Redis가 기준이 됨)
+            redisTemplate.opsForValue().set(key, String.valueOf(dbCount), java.time.Duration.ofDays(1));
+            return dbCount;
+        }
+        return Long.parseLong(val);
+    }
+    private Long getViewCount(Long postId, Long dbCount) {
+        String key = VIEW_COUNT_KEY + postId;
+        String val = redisTemplate.opsForValue().get(key);
 
         if (val == null) {
+            // Redis에 없으면 DB 값을 기준으로 세팅 (12시간 유지)
             redisTemplate.opsForValue().set(key, String.valueOf(dbCount), java.time.Duration.ofHours(12));
             return dbCount;
         }
         return Long.parseLong(val);
     }
-
     private PostResponseDto convertToDto(Post post) {
         return PostResponseDto.builder()
                 .id(post.getId())
                 .title(post.getTitle())
                 .content(post.getContent())
                 .category(post.getCategory())
-                .viewCount(post.getViewCount())
+                .viewCount(getViewCount(post.getId(), post.getViewCount()))
                 .likeCount(getLikeCount(post.getId(), post.getLikeCount()))
                 .authorNickname(post.getUser().getNickname())
                 .createdAt(post.getCreatedAt())
