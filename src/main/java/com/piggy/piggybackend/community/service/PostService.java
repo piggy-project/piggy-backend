@@ -162,6 +162,7 @@ public class PostService {
 
     // 공통 동기화 로직
     private void syncCounts(String keyPrefix, java.util.function.BiConsumer<Post, Long> setter) {
+        //나중에 게시글이 수만개가 넘어가면 redis가 멈출 수 있음. 그럼 그때는 SCAN으로 바꿔야함
         java.util.Set<String> keys = redisTemplate.keys(keyPrefix + "*");
         if (keys == null) return;
 
