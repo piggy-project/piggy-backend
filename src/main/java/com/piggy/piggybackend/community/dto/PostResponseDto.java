@@ -20,4 +20,5 @@ public class PostResponseDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private boolean isLiked;
+    private boolean isAuthor;
 }

@@ -60,6 +60,7 @@ public class PostService {
             PostResponseDto dto = convertToDto(post);
             if (user != null) {
                 dto.setLiked(isUserLiked(post.getId(), user.getId()));
+                dto.setAuthor(post.getUser().getId().equals(user.getId()));
             }
             return dto;
         }).collect(Collectors.toList());
@@ -82,6 +83,7 @@ public class PostService {
         // 상세 조회 시 redis 확인
         if (user != null) {
             dto.setLiked(isUserLiked(postId, user.getId()));
+            dto.setAuthor(post.getUser().getId().equals(user.getId()));
         }
 
         return dto;
