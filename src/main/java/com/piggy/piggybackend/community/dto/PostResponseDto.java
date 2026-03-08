@@ -17,6 +17,7 @@ public class PostResponseDto {
     private String category;
     private Long viewCount;
     private Long likeCount;
+    private Long commentCount;
     private String authorNickname;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

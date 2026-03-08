@@ -9,6 +9,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "posts")
@@ -54,11 +55,20 @@ public class Post {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
-    private User user; // 작성자 (사용자 아이디 연관관계)
+    private User user;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Long commentCount = 0L; // 댓글 개수
 
     @Builder.Default
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
-    private java.util.List<PostLike> postLikes = new java.util.ArrayList<>();
+    private List<PostLike> postLikes = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC") // 댓글은 작성순으로 정렬
+    private List<Comment> comments = new ArrayList<>();
 
     // --- 비즈니스 로직 ---
 
@@ -81,6 +91,18 @@ public class Post {
     public void decrementLikeCount() {
         if (this.likeCount > 0) {
             this.likeCount--;
+        }
+    }
+
+    // 댓글 수 증가
+    public void incrementCommentCount() {
+        this.commentCount++;
+    }
+
+    // 댓글 수 감소 (0 이하 방어)
+    public void decrementCommentCount() {
+        if (this.commentCount > 0) {
+            this.commentCount--;
         }
     }
 }
