@@ -1,5 +1,6 @@
 package com.piggy.piggybackend.community.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -20,5 +21,7 @@ public class PostResponseDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private boolean isLiked;
+
+    @JsonProperty("isAuthor")
     private boolean isAuthor;
 }
