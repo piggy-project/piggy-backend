@@ -108,7 +108,14 @@ public class ChatbotService {
     // ─────────────────────────────────────────
 
     private String buildCacheKey(String question) {
-        return CHAT_CACHE_PREFIX + question.replaceAll("[^ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z0-9]", "");
+
+        String normalized = question
+                .replaceAll("[^ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z0-9]", "")
+                .replaceAll("(해줘|해줄래|해주세요|좀|줘|주랑|주세요|알려줘|알려주세요|추천해|부탁해|추천좀|있어|없어|뭐야|뭔데|어때)$", "")
+                .trim();
+
+        return CHAT_CACHE_PREFIX + normalized;
+
     }
 
     private boolean isTravelRecommendation(String question) {
