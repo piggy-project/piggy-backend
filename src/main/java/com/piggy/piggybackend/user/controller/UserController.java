@@ -130,11 +130,8 @@ public class UserController {
     public ResponseEntity<ApiResponse<String>> deleteProfileImage(
             @AuthenticationPrincipal String email) {
 
-        // 📍 1. 서비스에서 반환하는 기본 이미지 URL을 받습니다.
         String defaultImageUrl = userService.deleteProfileImage(email);
 
-        // 📍 2. ApiResponse.success의 데이터 자리에 URL을 넣어줍니다.
-        // (ApiResponse 구조에 따라 매개변수 순서가 다를 수 있으니 확인해 보세요!)
         return ResponseEntity.ok(ApiResponse.success("프로필 이미지가 삭제되었습니다.", defaultImageUrl));
     }
 }
