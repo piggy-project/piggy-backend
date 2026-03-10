@@ -9,6 +9,7 @@ public class UserInfoResponse {
     private String email;
     private String nickname;
     private String name;
+    private String profileImageUrl;
 
     // Entity -> DTO 변환 생성자
     public UserInfoResponse(User user) {
@@ -16,5 +17,6 @@ public class UserInfoResponse {
         this.email = user.getEmail();
         this.nickname = user.getNickname();
         this.name = user.getName();
+        this.profileImageUrl = user.getProfileImageUrl();
     }
 }

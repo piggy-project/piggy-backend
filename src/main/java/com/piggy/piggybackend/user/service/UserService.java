@@ -12,6 +12,7 @@ import com.piggy.piggybackend.user.entity.User;
 import com.piggy.piggybackend.user.repository.PasswordResetTokenRepository;
 import com.piggy.piggybackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,32 +35,34 @@ public class UserService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final MailService mailService;
     private final S3Service s3Service;
-    private String defaultProfileImage;
+
+    @Value("${app.default-image-url}")
+    private String defaultProfileImageUrl;
 
     public void signUp(UserCreateRequest request) {
 
-        // 1️⃣ 이메일 중복 체크
+        // 이메일 중복 체크
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }
 
-        // 2️⃣ 닉네임 중복 체크
+        // 닉네임 중복 체크
         if (userRepository.existsByNickname(request.getNickname())) {
             throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
         }
 
-        // 3️⃣ 비밀번호 확인
+        // 비밀번호 확인
         if (!request.getPassword().equals(request.getCheckedPassword())) {
             throw new CustomException(ErrorCode.VALIDATION_ERROR);
         }
 
-        // 4️⃣ 비밀번호 해싱
+        // 비밀번호 해싱
         String encodedPassword = passwordEncoder.encode(request.getPassword());
 
-        // 5️⃣ 전화번호 AES 암호화
+        // 전화번호 AES 암호화
         String encryptedPhone = cryptoUtil.encrypt(request.getPhoneNum());
 
-        // 6️⃣ User 생성
+        // User 생성
         User user = User.builder()
                 .email(request.getEmail())
                 .password(encodedPassword)
@@ -67,6 +70,7 @@ public class UserService {
                 .nickname(request.getNickname())
                 .birth(request.getBirth())
                 .phoneNum(encryptedPhone)
+                .profileImageUrl(defaultProfileImageUrl)
                 .provider(Provider.LOCAL)
                 .providerId(null)
                 .build();
@@ -270,9 +274,9 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 기존 프사가 있으면 S3에서 삭제
-        if (user.getProfileImageUrl() != null) {
-            s3Service.delete(user.getProfileImageUrl());
+        String currentImageUrl = user.getProfileImageUrl();
+        if (currentImageUrl != null && !currentImageUrl.equals(defaultProfileImageUrl)) {
+            s3Service.delete(currentImageUrl);
         }
 
         // 새 프사 업로드 및 DB 업데이트
@@ -288,12 +292,11 @@ public class UserService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        // 1. S3에 실제 파일이 있다면 삭제
-        if (user.getProfileImageUrl() != null) {
-            s3Service.delete(user.getProfileImageUrl());
+        String currentImageUrl = user.getProfileImageUrl();
+        if (currentImageUrl != null && !currentImageUrl.equals(defaultProfileImageUrl)) {
+            s3Service.delete(currentImageUrl);
         }
 
-        // 2. DB 경로를 null로 업데이트
-        user.updateProfileImage(null);
+        user.updateProfileImage(defaultProfileImageUrl);
     }
 }

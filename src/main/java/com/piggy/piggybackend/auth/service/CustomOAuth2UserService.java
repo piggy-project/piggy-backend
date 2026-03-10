@@ -8,6 +8,7 @@ import com.piggy.piggybackend.user.entity.User;
 import com.piggy.piggybackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -29,6 +30,9 @@ public class CustomOAuth2UserService
         extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
+
+    @Value("${app.default-image-url}")
+    private String defaultProfileImageUrl;
 
     @Transactional
     @Override
@@ -82,6 +86,8 @@ public class CustomOAuth2UserService
 
                 // 4. phoneNum: 이번 에러 해결! 임시 번호 주입
                 .phoneNum("010-0000-0000")
+
+                .profileImageUrl(defaultProfileImageUrl)
 
                 .build());
         return savedUser;

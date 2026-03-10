@@ -170,6 +170,7 @@ gemini:
 
 
 app:
+  default-image-url: https://piggy-project.s3.ap-northeast-2.amazonaws.com/default/%EA%B8%B0%EB%B3%B8%ED%94%84%EC%82%ACpiggy.png
   frontend-url: https://piggys.mooo.com
   default:
     profile-image: https://piggy-project.s3.ap-northeast-2.amazonaws.com/default/profile.png
