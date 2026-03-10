@@ -288,7 +288,7 @@ public class UserService {
 
     //프로필사진 삭제
     @Transactional
-    public void deleteProfileImage(String email) {
+    public String deleteProfileImage(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
@@ -298,5 +298,7 @@ public class UserService {
         }
 
         user.updateProfileImage(defaultProfileImageUrl);
+
+        return defaultProfileImageUrl;
     }
 }
