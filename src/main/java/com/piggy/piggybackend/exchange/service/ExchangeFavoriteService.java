@@ -1,0 +1,100 @@
+package com.piggy.piggybackend.exchange.service;
+
+import com.piggy.piggybackend.exchange.dto.ExchangeDetailResponseDto;
+import com.piggy.piggybackend.exchange.dto.ExchangeFavoriteResponseDto;
+import com.piggy.piggybackend.exchange.entity.ExchangeFavorite;
+import com.piggy.piggybackend.exchange.repository.ExchangeFavoriteRepository;
+import com.piggy.piggybackend.global.exception.CustomException;
+import com.piggy.piggybackend.global.exception.ErrorCode;
+import com.piggy.piggybackend.user.entity.User;
+import com.piggy.piggybackend.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Map;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class ExchangeFavoriteService {
+
+    private final ExchangeFavoriteRepository favoriteRepository;
+    private final ExchangeRateService exchangeRateService;
+    private final UserRepository userRepository;
+
+    private static final Map<String, String> CURRENCY_NAME_MAP = Map.of(
+            "JPY", "일본 엔",
+            "CNY", "중국 위안",
+            "USD", "미국 달러",
+            "VND", "베트남 동",
+            "PHP", "필리핀 페소",
+            "THB", "태국 바트",
+            "EUR", "유럽연합 유로",
+            "AUD", "호주 달러",
+            "GBP", "영국 파운드"
+    );
+
+    /** 즐겨찾기 추가/제거 토글 */
+    @Transactional
+    public boolean toggleFavorite(String email, String currencyCode) {
+        User user = getUser(email);
+
+        return favoriteRepository.findByUserAndCurrencyCode(user, currencyCode)
+                .map(existing -> {
+                    favoriteRepository.delete(existing);
+                    log.info("[즐겨찾기] 제거 - user: {}, currency: {}", email, currencyCode);
+                    return false; // 제거됨
+                })
+                .orElseGet(() -> {
+                    favoriteRepository.save(ExchangeFavorite.builder()
+                            .user(user)
+                            .currencyCode(currencyCode)
+                            .build());
+                    log.info("[즐겨찾기] 추가 - user: {}, currency: {}", email, currencyCode);
+                    return true; // 추가됨
+                });
+    }
+
+    /** 즐겨찾기 목록 + 현재 환율 조회 */
+    @Transactional(readOnly = true)
+    public List<ExchangeFavoriteResponseDto> getFavorites(String email) {
+        User user = getUser(email);
+
+        return favoriteRepository.findAllByUser(user).stream()
+                .map(favorite -> {
+                    String code = favorite.getCurrencyCode();
+                    try {
+                        ExchangeDetailResponseDto detail = exchangeRateService.getExchangeDetail(code);
+                        return ExchangeFavoriteResponseDto.builder()
+                                .currencyCode(code)
+                                .currencyName(CURRENCY_NAME_MAP.getOrDefault(code, code))
+                                .currentRate(detail.getCurrentRate())
+                                .change(detail.getChange())
+                                .percentChange(detail.getPercentChange())
+                                .high(detail.getHigh())
+                                .low(detail.getLow())
+                                .build();
+                    } catch (Exception e) {
+                        log.warn("[즐겨찾기] {} 환율 조회 실패: {}", code, e.getMessage());
+                        return null;
+                    }
+                })
+                .filter(dto -> dto != null)
+                .toList();
+    }
+
+    /** 특정 통화가 즐겨찾기 여부 확인 */
+    @Transactional(readOnly = true)
+    public boolean isFavorite(String email, String currencyCode) {
+        User user = getUser(email);
+        return favoriteRepository.existsByUserAndCurrencyCode(user, currencyCode);
+    }
+
+    private User getUser(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+    }
+}
