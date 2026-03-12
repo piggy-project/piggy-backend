@@ -13,6 +13,7 @@ import com.piggy.piggybackend.user.repository.PasswordResetTokenRepository;
 import com.piggy.piggybackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -211,6 +212,13 @@ public class UserService {
 
         passwordResetTokenRepository.delete(resetToken);
     }
+
+    // 매일 새벽 3시에 만료된 토큰 싹 지우기
+    @Scheduled(cron = "0 0 3 * * *")
+    public void cleanupExpiredTokens() {
+        passwordResetTokenRepository.deleteAllByExpiryDateBefore(LocalDateTime.now());
+    }
+
     @Transactional
     public void updateAdditionalInfo(String email, AdditionalInfoRequest request) {
         // 1. 이메일로 유저 조회
