@@ -12,4 +12,5 @@ public class ExchangeRankingResponseDto {
     private double rate;          // 현재 환율
     private double change;        // 전일 대비 변동폭
     private double percentChange; // 전일 대비 등락률 (%)
+    private String time;          // 환율 기준 시간
 }

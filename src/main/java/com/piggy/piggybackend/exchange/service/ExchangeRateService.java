@@ -22,6 +22,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -215,6 +216,8 @@ public class ExchangeRateService {
             throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
         }
 
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        String baseTime = now.format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:00"));
         String todayStr = LocalDate.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
         // 전일 마감가 DB에서 한 번에 조회 (N+1 방지)
@@ -247,6 +250,7 @@ public class ExchangeRateService {
                             .rate(currentRate)
                             .change(Math.round(change * 100) / 100.0)
                             .percentChange(Math.round(percentChange * 100) / 100.0)
+                            .time(baseTime)
                             .build();
                 })
                 .collect(Collectors.toList());
