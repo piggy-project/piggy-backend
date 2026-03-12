@@ -13,7 +13,7 @@ public class MailService {
 
     public void sendResetMail(String to, String token) {
 
-        String resetLink = "https://piggys.moon.com/password/reset?token=" + token;
+        String resetLink = "https://piggys.mooo.com/password/reset?token=" + token;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
