@@ -6,22 +6,20 @@ import com.piggy.piggybackend.global.service.S3Service;
 import com.piggy.piggybackend.global.util.CryptoUtil;
 import com.piggy.piggybackend.global.util.JwtUtil;
 import com.piggy.piggybackend.user.dto.*;
-import com.piggy.piggybackend.user.entity.PasswordResetToken;
 import com.piggy.piggybackend.user.entity.Provider;
 import com.piggy.piggybackend.user.entity.User;
-import com.piggy.piggybackend.user.repository.PasswordResetTokenRepository;
 import com.piggy.piggybackend.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 
 @Service
@@ -33,9 +31,11 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final CryptoUtil cryptoUtil;
     private final JwtUtil jwtUtil;
-    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final StringRedisTemplate redisTemplate;
     private final MailService mailService;
     private final S3Service s3Service;
+
+    private static final String RESET_PREFIX = "pwd_reset:";
 
     @Value("${app.default-image-url}")
     private String defaultProfileImageUrl;
@@ -174,49 +174,45 @@ public class UserService {
     public void createResetToken(String email) {
         userRepository.findByEmail(email).ifPresent(user -> {
 
-            passwordResetTokenRepository.deleteByUser(user);
-
+            // 1. 고유 토큰 생성
             String token = UUID.randomUUID().toString();
+            String key = RESET_PREFIX + token;
 
-            PasswordResetToken resetToken = PasswordResetToken.builder()
-                    .token(token)
-                    .user(user)
-                    .expiryDate(LocalDateTime.now().plusMinutes(30))
-                    .build();
+            // 2. Redis에 저장 (Key: 토큰, Value: 이메일)
+            // 30분 뒤 자동으로 사라지도록 설정 (유효기간 30분)
+            redisTemplate.opsForValue().set(key, email, 30, TimeUnit.MINUTES);
 
-            passwordResetTokenRepository.save(resetToken);
-
+            // 3. 메일 발송
             mailService.sendResetMail(email, token);
         });
     }
 
-    //비밀번호 변경
     @Transactional
     public void resetPassword(String token, String newPassword) {
+        String key = RESET_PREFIX + token;
 
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
-                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_TOKEN));
+        // 1. Redis에서 토큰으로 이메일 조회
+        String email = redisTemplate.opsForValue().get(key);
 
-        if (resetToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+        // 2. 토큰이 없거나 만료된 경우
+        if (email == null) {
             throw new CustomException(ErrorCode.EXPIRED_TOKEN);
         }
 
-        User user = resetToken.getUser();
+        // 3. 유저 조회
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-
+        // 4. 기존 비밀번호 확인
         if (passwordEncoder.matches(newPassword, user.getPassword())) {
             throw new CustomException(ErrorCode.SAME_PASSWORD);
         }
 
+        // 5. 비밀번호 업데이트
         user.updatePassword(passwordEncoder.encode(newPassword));
 
-        passwordResetTokenRepository.delete(resetToken);
-    }
-
-    // 매일 새벽 3시에 만료된 토큰 싹 지우기
-    @Scheduled(cron = "0 0 3 * * *")
-    public void cleanupExpiredTokens() {
-        passwordResetTokenRepository.deleteAllByExpiryDateBefore(LocalDateTime.now());
+        // 6. 사용 완료된 토큰은 즉시 삭제
+        redisTemplate.delete(key);
     }
 
     @Transactional
