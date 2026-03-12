@@ -2,6 +2,7 @@ package com.piggy.piggybackend.user.entity;
 
 import com.piggy.piggybackend.community.entity.Comment;
 import com.piggy.piggybackend.community.entity.Post;
+import com.piggy.piggybackend.community.entity.PostLike;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -59,6 +60,11 @@ public class User {
     @Builder.Default
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<Comment> comments = new ArrayList<>();
+
+    // 내가 누른 좋아요
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<PostLike> postLikes = new ArrayList<>();
 
     @Column(length = 512)
     private String profileImageUrl;
