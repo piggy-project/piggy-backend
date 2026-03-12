@@ -171,7 +171,7 @@ public class UserService {
     }
 
     @Transactional
-    public void createResetToken(String email) {
+    public void createResetToken(String email, String source) {
         userRepository.findByEmail(email).ifPresent(user -> {
 
             // 1. 고유 토큰 생성
@@ -183,7 +183,7 @@ public class UserService {
             redisTemplate.opsForValue().set(key, email, 30, TimeUnit.MINUTES);
 
             // 3. 메일 발송
-            mailService.sendResetMail(email, token);
+            mailService.sendResetMail(email, token, source);
         });
     }
 

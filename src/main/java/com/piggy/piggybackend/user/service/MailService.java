@@ -11,14 +11,24 @@ public class MailService {
 
     private final JavaMailSender mailSender;
 
-    public void sendResetMail(String to, String token) {
+    public void sendResetMail(String to, String token, String source) {
+        String resetLink;
 
-        String resetLink = "https://piggys.mooo.com/password/reset?token=" + token;
+        if ("app".equalsIgnoreCase(source)) {
+            // 앱 요청일 경우 (Expo Go 딥링크)
+            String expoIp = "localhost:8081";
+            resetLink = "exp://" + expoIp + "/--/password-reset?token=" + token;
+        } else {
+            // 웹 요청일 경우 (일반 HTTPS 링크)
+            resetLink = "https://piggys.mooo.com/password/reset?token=" + token;
+        }
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(to);
-        message.setSubject("비밀번호 재설정");
-        message.setText("아래 링크 클릭:\n" + resetLink);
+        message.setSubject("[Piggy] 비밀번호 재설정 안내");
+        message.setText("안녕하세요. 비밀번호 재설정을 위해 아래 링크를 클릭해주세요.\n\n" +
+                "비밀번호 재설정 링크: " + resetLink + "\n\n" +
+                "본인이 요청하지 않았다면 이 이메일을 무시하셔도 됩니다.");
 
         mailSender.send(message);
     }
