@@ -169,9 +169,11 @@ public class UserService {
         return new UserInfoResponse(user);
     }
 
+    @Transactional
     public void createResetToken(String email) {
-
         userRepository.findByEmail(email).ifPresent(user -> {
+
+            passwordResetTokenRepository.deleteByUser(user);
 
             String token = UUID.randomUUID().toString();
 
@@ -185,8 +187,6 @@ public class UserService {
 
             mailService.sendResetMail(email, token);
         });
-
-        // 존재 안 해도 그냥 성공 응답
     }
 
     //비밀번호 변경
