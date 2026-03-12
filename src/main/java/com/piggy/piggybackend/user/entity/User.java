@@ -1,9 +1,13 @@
 package com.piggy.piggybackend.user.entity;
 
+import com.piggy.piggybackend.community.entity.Comment;
+import com.piggy.piggybackend.community.entity.Post;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -46,6 +50,15 @@ public class User {
     @Column(nullable = true)
     private String providerId;
 
+    // 내가 쓴 게시글들
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Post> posts = new ArrayList<>();
+
+    // 내가 쓴 댓글들
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<Comment> comments = new ArrayList<>();
 
     @Column(length = 512)
     private String profileImageUrl;
