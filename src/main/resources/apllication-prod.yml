@@ -7,18 +7,5 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
-jwt:
-  secret-key: ${JWT_SECRET_KEY}
-exim-api:
-  url: https://www.koreaexim.go.kr/site/program/financial/exchangeJSON
-  auth-key: ${KOREAEXIM_API_KEY}
 
-twelvedata:
-  api:
-    key: ${TWELVE_DATA_API_KEY}
-    url: https://api.twelvedata.com/price
 
-api:
-  exchangerate:
-    key: ${EXCHANGERATE_API_KEY}
-    url: https://v6.exchangerate-api.com/v6/

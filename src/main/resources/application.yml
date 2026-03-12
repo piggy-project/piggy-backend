@@ -126,6 +126,11 @@ jwt:
 crypto:
   secret: ${CRYPTO_KEY}
 
+twelvedata:
+  api:
+    key: ${TWELVE_DATA_API_KEY}
+    url: https://api.twelvedata.com/price
+
 exim-api:
   url: https://www.koreaexim.go.kr/site/program/financial/exchangeJSON
   auth-key: ${KOREAEXIM_API_KEY}
