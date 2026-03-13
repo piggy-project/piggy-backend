@@ -21,40 +21,24 @@ public class ExchangeFavoriteController {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
-    private boolean isAnonymous(String email) {
-        return email == null || email.equals("anonymousUser");
-    }
-
     /** 즐겨찾기 목록 + 현재 환율 조회 */
     @GetMapping
-    public ResponseEntity<?> getFavorites() {
-        String email = getEmail();
-        if (isAnonymous(email)) {
-            return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
-        }
-        List<ExchangeFavoriteResponseDto> result = favoriteService.getFavorites(email);
+    public ResponseEntity<List<ExchangeFavoriteResponseDto>> getFavorites() {
+        List<ExchangeFavoriteResponseDto> result = favoriteService.getFavorites(getEmail());
         return ResponseEntity.ok(result);
     }
 
     /** 즐겨찾기 추가/제거 토글 */
     @PostMapping("/{currencyCode}")
-    public ResponseEntity<?> toggleFavorite(@PathVariable String currencyCode) {
-        String email = getEmail();
-        if (isAnonymous(email)) {
-            return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
-        }
-        boolean added = favoriteService.toggleFavorite(email, currencyCode);
+    public ResponseEntity<Map<String, Object>> toggleFavorite(@PathVariable String currencyCode) {
+        boolean added = favoriteService.toggleFavorite(getEmail(), currencyCode);
         return ResponseEntity.ok(Map.of("currencyCode", currencyCode, "favorited", added));
     }
 
     /** 특정 통화 즐겨찾기 여부 확인 */
     @GetMapping("/{currencyCode}")
-    public ResponseEntity<?> isFavorite(@PathVariable String currencyCode) {
-        String email = getEmail();
-        if (isAnonymous(email)) {
-            return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
-        }
-        boolean favorited = favoriteService.isFavorite(email, currencyCode);
+    public ResponseEntity<Map<String, Object>> isFavorite(@PathVariable String currencyCode) {
+        boolean favorited = favoriteService.isFavorite(getEmail(), currencyCode);
         return ResponseEntity.ok(Map.of("currencyCode", currencyCode, "favorited", favorited));
     }
 }

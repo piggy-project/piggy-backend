@@ -37,16 +37,15 @@ public class ExchangeFavoriteService {
             "GBP", "영국 파운드"
     );
 
-    /** 즐겨찾기 추가/제거 토글 */
     @Transactional
     public boolean toggleFavorite(String email, String currencyCode) {
-        User user = getUser(email);
+        User user = getUser(email); // 여기서 로그인 검증 및 유저 조회가 한 번에 처리됨
 
         return favoriteRepository.findByUserAndCurrencyCode(user, currencyCode)
                 .map(existing -> {
                     favoriteRepository.delete(existing);
                     log.info("[즐겨찾기] 제거 - user: {}, currency: {}", email, currencyCode);
-                    return false; // 제거됨
+                    return false;
                 })
                 .orElseGet(() -> {
                     favoriteRepository.save(ExchangeFavorite.builder()
@@ -54,11 +53,10 @@ public class ExchangeFavoriteService {
                             .currencyCode(currencyCode)
                             .build());
                     log.info("[즐겨찾기] 추가 - user: {}, currency: {}", email, currencyCode);
-                    return true; // 추가됨
+                    return true;
                 });
     }
 
-    /** 즐겨찾기 목록 + 현재 환율 조회 */
     @Transactional(readOnly = true)
     public List<ExchangeFavoriteResponseDto> getFavorites(String email) {
         User user = getUser(email);
@@ -86,14 +84,20 @@ public class ExchangeFavoriteService {
                 .toList();
     }
 
-    /** 특정 통화가 즐겨찾기 여부 확인 */
     @Transactional(readOnly = true)
     public boolean isFavorite(String email, String currencyCode) {
         User user = getUser(email);
         return favoriteRepository.existsByUserAndCurrencyCode(user, currencyCode);
     }
 
+    // 에러 처리 로직
     private User getUser(String email) {
+        // 1. 익명 사용자(비로그인) 처리
+        if (email == null || email.equals("anonymousUser")) {
+            throw new CustomException(ErrorCode.LOGIN_REQUIRED);
+        }
+
+        // 2. DB에 존재하지 않는 유저 처리
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
