@@ -14,6 +14,7 @@ public class MailService {
     public void sendResetMail(String to, String token, String source) {
         String resetLink;
 
+
         if ("app".equalsIgnoreCase(source)) {
             // 앱 요청일 경우 (Expo Go 딥링크)
             String expoIp = "localhost:8081";

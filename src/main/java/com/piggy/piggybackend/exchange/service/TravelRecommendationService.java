@@ -40,7 +40,7 @@ public class TravelRecommendationService {
     private static final String GEMINI_API_URL =
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
     private static final List<String> TARGET_CURRENCIES = List.of(
-            "JPY", "THB", "VND", "PHP", "USD", "EUR"
+            "JPY", "THB", "VND", "PHP", "USD", "EUR","CNY","AUD","GBP"
     );
 
     @Value("${gemini.api.key}")
