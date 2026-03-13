@@ -8,7 +8,8 @@ import lombok.Getter;
 @Builder
 public class TravelRecommendationResponseDto {
 
-    private String destination;   // 여행지명 (예: 일본 도쿄)
+    private String destination;   // 여행지나라(예: 일본)
+    private String location;      // 여행지 명(ex: 도쿄)
     private String reason;        // 추천 이유
     private String currencyCode;  // 통화 코드 (JPY, THB ...)
     private String currencyName;  // 통화명 (일본 엔 ...)

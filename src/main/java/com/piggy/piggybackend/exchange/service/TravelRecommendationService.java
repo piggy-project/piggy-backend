@@ -121,9 +121,11 @@ public class TravelRecommendationService {
                 반드시 아래 JSON 배열 형식으로만 응답하세요. 다른 텍스트나 마크다운 코드블록 없이 순수 JSON만 응답하세요:
                 [
                   {
-                    "destination": "여행지명 (예: 일본 도쿄)",
+                    "destination": "여행지나라 (예: 일본)",
+                    "location": "여행지 명 (예: 도쿄)",
                     "reason": "추천 이유 (1문장에서 2문장 문장은 "가성비 여행 추천!!", "겨울에는 후쿠오카!"이런식으로)",
                     "currencyCode": "통화코드 (예: JPY)"
+           
                   }
                 ]
                 """, rateInfo);
