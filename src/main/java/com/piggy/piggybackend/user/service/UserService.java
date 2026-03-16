@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -84,6 +85,12 @@ public class UserService {
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CREDENTIALS));
+
+        // 1. 탈퇴 유예 중인 회원인지 확인 (추가된 부분)
+        if (user.getDeletedAt() != null) {
+            // 프론트엔드에서 이 에러 코드를 받으면 "복구하시겠습니까?" 모달을 띄우도록 유도
+            throw new CustomException(ErrorCode.USER_WITHDRAWN, "탈퇴 진행 중인 계정입니다. 계정을 복구하시겠습니까?");
+        }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
@@ -304,5 +311,47 @@ public class UserService {
         user.updateProfileImage(defaultProfileImageUrl);
 
         return defaultProfileImageUrl;
+    }
+
+    @Transactional
+    public void withdraw(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 이미 탈퇴한 회원인지 체크 (선택사항)
+        if (user.getDeletedAt() != null) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST, "이미 탈퇴 처리된 회원입니다.");
+        }
+
+        user.softDelete();
+    }
+
+    // 스케줄러용: 1달 지난 탈퇴 회원 영구 삭제
+    @Transactional
+    public void deleteExpiredUsers() {
+        LocalDateTime oneMonthAgo = LocalDateTime.now().minusMonths(1);
+        userRepository.deleteByDeletedAtBefore(oneMonthAgo);
+    }
+
+    // 계정 복구 로직
+    @Transactional
+    public void recoverAccount(LoginRequest request) {
+
+        // 1. 유저 조회 (탈퇴한 유저도 조회되어야 하므로 일반 findByEmail 사용)
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // 2. 본인 확인을 위해 비밀번호 한 번 더 검증
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
+        }
+
+        // 3. 탈퇴한 계정이 맞는지 확인
+        if (user.getDeletedAt() == null) {
+            throw new CustomException(ErrorCode.INVALID_REQUEST, "탈퇴 상태인 계정이 아닙니다.");
+        }
+
+        // 4. 복구 (deletedAt 초기화)
+        user.recover();
     }
 }

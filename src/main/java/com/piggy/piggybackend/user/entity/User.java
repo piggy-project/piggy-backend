@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -69,6 +70,18 @@ public class User {
     @Column(length = 512)
     private String profileImageUrl;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    // 소프트 삭제 메서드
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    // 계정 복구 메서드
+    public void recover() {
+        this.deletedAt = null;
+    }
     public void updateProfileImage(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }

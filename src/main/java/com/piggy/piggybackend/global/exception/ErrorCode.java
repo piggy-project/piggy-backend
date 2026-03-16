@@ -31,7 +31,9 @@ public enum ErrorCode {
     NOT_AUTHORIZED(HttpStatus.FORBIDDEN, "NotAuthorized", "해당 작업을 수행할 권한이 없습니다."),
     LOGIN_REQUIRED(HttpStatus.UNAUTHORIZED, "LoginRequired", "로그인이 필요합니다."),
 
-    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "EmptyComment","댓글을 찾을 수 없습니다.");
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "EmptyComment","댓글을 찾을 수 없습니다."),
+
+    USER_WITHDRAWN(HttpStatus.FORBIDDEN, "UserWithDrawn", "탈퇴중인 회원입니다.");
     private final HttpStatus httpStatus;
     private final String errorCode;
     private final String message;

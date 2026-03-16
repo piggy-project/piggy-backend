@@ -134,4 +134,23 @@ public class UserController {
 
         return ResponseEntity.ok(ApiResponse.success("프로필 이미지가 삭제되었습니다.", defaultImageUrl));
     }
+
+    // 회원 탈퇴 (소프트 삭제)
+    @DeleteMapping("/withdraw")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<String>> withdraw(
+            @AuthenticationPrincipal String email) {
+
+        userService.withdraw(email);
+        return ResponseEntity.ok(ApiResponse.success("회원 탈퇴가 완료되었습니다. 1달 뒤 모든 정보가 영구 삭제됩니다."));
+    }
+    // 계정 복구
+    @PostMapping("/recover")
+    public ResponseEntity<ApiResponse<String>> recoverAccount(
+            @Valid @RequestBody LoginRequest request) {
+
+        userService.recoverAccount(request);
+
+        return ResponseEntity.ok(ApiResponse.success("계정이 성공적으로 복구되었습니다. 다시 로그인해 주세요."));
+    }
 }
