@@ -123,23 +123,6 @@ jwt:
   access-expiration: 900000        # 15분
   refresh-expiration: 1209600000   # 14일
 
-crypto:
-  secret: ${CRYPTO_KEY}
-
-twelvedata:
-  api:
-    key: ${TWELVE_DATA_API_KEY}
-    url: https://api.twelvedata.com/price
-
-exim-api:
-  url: https://www.koreaexim.go.kr/site/program/financial/exchangeJSON
-  auth-key: ${KOREAEXIM_API_KEY}
-
-api:
-  exchangerate:
-    key: ${EXCHANGERATE_API_KEY}
-    url: https://v6.exchangerate-api.com/v6/
-
 ebay:
   client-id: ${EBAY_CLIENT_ID}
   client-secret: ${EBAY_CLIENT_SECRET}
