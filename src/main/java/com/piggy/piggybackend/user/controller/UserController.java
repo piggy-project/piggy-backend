@@ -153,4 +153,14 @@ public class UserController {
 
         return ResponseEntity.ok(ApiResponse.success("계정이 성공적으로 복구되었습니다. 다시 로그인해 주세요."));
     }
+
+    //알림
+    @PatchMapping("/me/fcm-token")
+    public ResponseEntity<Void> updateFcmToken(
+            @AuthenticationPrincipal String email,
+            @RequestBody FcmTokenRequest request) {
+
+        userService.updateFcmToken(email, request.getFcmToken());
+        return ResponseEntity.ok().build();
+    }
 }

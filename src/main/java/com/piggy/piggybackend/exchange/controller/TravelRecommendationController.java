@@ -18,10 +18,14 @@ public class TravelRecommendationController {
 
     private final TravelRecommendationService travelRecommendationService;
 
-    // 가성비 여행지 AI 추천
-    // GET /api/exchange/travel-recommendations
     @GetMapping("/travel-recommendations")
     public ResponseEntity<List<TravelRecommendationResponseDto>> getRecommendations() {
         return ResponseEntity.ok(travelRecommendationService.getRecommendations());
+    }
+    // 레디스 초기화하는 경로
+    @GetMapping("/travel-recommendations/clear")
+    public ResponseEntity<String> clearCache() {
+        travelRecommendationService.clearCache();
+        return ResponseEntity.ok("Cache Cleared");
     }
 }

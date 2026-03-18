@@ -15,4 +15,5 @@ public class TravelRecommendationResponseDto {
     private String currencyName;  // 통화명 (일본 엔 ...)
     private double exchangeRate;  // 현재 환율 (원화 기준)
     private double percentChange; // 전일 대비 등락률 (%)
+    private String imageUrl; // 이미지
 }

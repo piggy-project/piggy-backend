@@ -354,4 +354,14 @@ public class UserService {
         // 4. 복구 (deletedAt 초기화)
         user.recover();
     }
+    //알림
+    @Transactional
+    public void updateFcmToken(String email, String rawToken) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        // CryptoUtil을 사용해 토큰 암호화 저장
+        String encryptedToken = cryptoUtil.encrypt(rawToken);
+        user.updateFcmToken(encryptedToken);
+    }
 }
