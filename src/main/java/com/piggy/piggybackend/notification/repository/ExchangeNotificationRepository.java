@@ -1,15 +1,19 @@
 package com.piggy.piggybackend.notification.repository;
 
 import com.piggy.piggybackend.notification.entity.ExchangeNotificationSetting;
-import com.piggy.piggybackend.notification.entity.ExchangeNotificationSetting;
 import com.piggy.piggybackend.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 import java.util.Optional;
 
 public interface ExchangeNotificationRepository extends JpaRepository<ExchangeNotificationSetting, Long> {
 
-    // 알림이 켜져 있는 모든 설정 조회 (스케줄러에서 사용)
+    // JOIN FETCH를 적용하여 N+1 문제 해결
+    @Query("SELECT DISTINCT n FROM ExchangeNotificationSetting n " +
+            "JOIN FETCH n.user u " +
+            "LEFT JOIN FETCH u.fcmTokens " +
+            "WHERE n.isActive = true")
     List<ExchangeNotificationSetting> findAllByIsActiveTrue();
 
     // 특정 유저의 특정 통화 알림 설정 조회

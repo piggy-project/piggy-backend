@@ -1,4 +1,4 @@
-package com.piggy.piggybackend.global.service;
+package com.piggy.piggybackend.user.service;
 
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.Message;

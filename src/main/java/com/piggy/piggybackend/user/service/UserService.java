@@ -35,6 +35,8 @@ public class UserService {
     private final StringRedisTemplate redisTemplate;
     private final MailService mailService;
     private final S3Service s3Service;
+    private final FcmTokenService fcmTokenService;
+
 
     private static final String RESET_PREFIX = "pwd_reset:";
 
@@ -354,14 +356,11 @@ public class UserService {
         // 4. 복구 (deletedAt 초기화)
         user.recover();
     }
-    //알림
+    // 알림 관련 서비스 내 토큰 업데이트 로직
     @Transactional
-    public void updateFcmToken(String email, String rawToken) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        // CryptoUtil을 사용해 토큰 암호화 저장
+    public void updateFcmToken(User user, String rawToken) {
         String encryptedToken = cryptoUtil.encrypt(rawToken);
-        user.updateFcmToken(encryptedToken);
+
+        fcmTokenService.saveOrUpdateToken(user, encryptedToken);
     }
 }

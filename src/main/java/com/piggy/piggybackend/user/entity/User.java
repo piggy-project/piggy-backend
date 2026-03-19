@@ -13,6 +13,7 @@ import java.util.List;
 
 @Entity
 @Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -73,12 +74,10 @@ public class User {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    @Column(length = 512)
-    private String fcmToken; // 구글이 폰을 식별하기 위한 주소값
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<FcmToken> fcmTokens = new ArrayList<>();
 
-    public void updateFcmToken(String fcmToken) {
-        this.fcmToken = fcmToken;
-    }
     // 소프트 삭제 메서드
     public void softDelete() {
         this.deletedAt = LocalDateTime.now();

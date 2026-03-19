@@ -5,7 +5,8 @@ import com.piggy.piggybackend.exchange.repository.ExchangeFavoriteRepository;
 import com.piggy.piggybackend.exchange.repository.ExchangeRateRepository;
 import com.piggy.piggybackend.global.exception.CustomException;
 import com.piggy.piggybackend.global.exception.ErrorCode;
-import com.piggy.piggybackend.global.service.FcmService;
+import com.piggy.piggybackend.user.entity.FcmToken;
+import com.piggy.piggybackend.user.service.FcmService;
 import com.piggy.piggybackend.notification.dto.NotificationListResponse;
 import com.piggy.piggybackend.notification.dto.NotificationSettingRequest;
 import com.piggy.piggybackend.notification.entity.ExchangeNotificationSetting;
@@ -13,6 +14,7 @@ import com.piggy.piggybackend.notification.entity.ReferencePeriod;
 import com.piggy.piggybackend.notification.repository.ExchangeNotificationRepository;
 import com.piggy.piggybackend.user.entity.User;
 import com.piggy.piggybackend.user.repository.UserRepository;
+import com.piggy.piggybackend.user.service.FcmTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -36,6 +38,7 @@ public class ExchangeNotificationService {
     private final UserRepository userRepository;
     private final StringRedisTemplate redisTemplate;
     private final FcmService fcmService;
+    private final FcmTokenService fcmTokenService;
 
     private static final String REDIS_LIVE_RATES = "exchange:live";
 
@@ -43,14 +46,10 @@ public class ExchangeNotificationService {
      * FCM 토큰 업데이트 API 용
      */
     @Transactional
-    public void updateUserFcmToken(String email, String fcmToken) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
-        // User 엔티티의 fcmToken 필드 업데이트 (Dirty Checking 활용)
-        // User 엔티티에 setFcmToken 메서드가 있거나 @Setter가 필요합니다.
-        user.updateFcmToken(fcmToken);
-        log.info("[FCM 토큰 업데이트] User: {}", email);
+    public void updateUserFcmToken(User user, String fcmToken) {
+        // 이전에 만든 서비스의 저장 로직 호출
+        fcmTokenService.saveOrUpdateToken(user, fcmToken);
+        log.info("[FCM 토큰 업데이트 완료] User: {}", user.getEmail());
     }
 
     /**
@@ -149,15 +148,21 @@ public class ExchangeNotificationService {
         String body = String.format("%s 대비 %.1f%% 변동! 현재가: %.2f원",
                 setting.getPeriod().getLabel(), fluctuation, currentRate);
 
-        // ✅ User 엔티티에 저장된 실제 fcmToken 필드를 가져옴
-        String userToken = setting.getUser().getFcmToken();
+        // 📍 유저의 모든 토큰 가져오기 (1:N 관계 활용)
+        List<FcmToken> fcmTokens = setting.getUser().getFcmTokens();
 
-        if (userToken != null && !userToken.isEmpty()) {
-            fcmService.sendPushNotification(userToken, title, body);
-            log.info("[FCM 발송 완료] User: {}, Currency: {}", setting.getUser().getEmail(), setting.getCurrencyCode());
-        } else {
+        if (fcmTokens == null || fcmTokens.isEmpty()) {
             log.warn("[FCM 발송 건너뜀] User: {} 의 토큰이 존재하지 않습니다.", setting.getUser().getEmail());
+            return;
         }
+
+        // 📍 모든 기기에 알림 발송
+        for (FcmToken fcmToken : fcmTokens) {
+            fcmService.sendPushNotification(fcmToken.getToken(), title, body);
+        }
+
+        log.info("[FCM 발송 완료] User: {}, Currency: {}, 기기수: {}",
+                setting.getUser().getEmail(), setting.getCurrencyCode(), fcmTokens.size());
     }
 
     @Transactional(readOnly = true)

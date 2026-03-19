@@ -1,7 +1,10 @@
 package com.piggy.piggybackend.user.controller;
 
 import com.piggy.piggybackend.global.response.ApiResponse;
+import com.piggy.piggybackend.global.util.LoginUser;
 import com.piggy.piggybackend.user.dto.*;
+import com.piggy.piggybackend.user.entity.User;
+import com.piggy.piggybackend.user.service.FcmTokenService;
 import com.piggy.piggybackend.user.service.UserService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -19,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class UserController {
 
     private final UserService userService;
+    private final FcmTokenService fcmTokenService;
 
     // 회원가입
     @PostMapping("/sign-up")
@@ -154,13 +158,14 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.success("계정이 성공적으로 복구되었습니다. 다시 로그인해 주세요."));
     }
 
-    //알림
-    @PatchMapping("/me/fcm-token")
+    // 알림 토큰 업데이트
+    @PostMapping("/fcm-token")
     public ResponseEntity<Void> updateFcmToken(
-            @AuthenticationPrincipal String email,
-            @RequestBody FcmTokenRequest request) {
+            @LoginUser User user,
+            @RequestBody FcmTokenRequestDto requestDto) {
 
-        userService.updateFcmToken(email, request.getFcmToken());
+        fcmTokenService.saveOrUpdateToken(user, requestDto.token());
+
         return ResponseEntity.ok().build();
     }
 }

@@ -11,8 +11,8 @@ public class NotificationScheduler {
 
     private final ExchangeNotificationService notificationService;
 
-    // 1시간(3,600,000ms)마다 환율 변동을 체크하여 푸시 발송
-    @Scheduled(fixedRate = 3600000)
+    // 매시 1분 0초에 실행 (0초 1분 *시 *일 *월 *요일)
+    @Scheduled(cron = "0 1 * * * *")
     public void runExchangeCheck() {
         notificationService.checkAndSendAlerts();
     }
