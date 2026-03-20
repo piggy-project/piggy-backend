@@ -7,6 +7,7 @@ import com.piggy.piggybackend.notification.dto.TargetPriceSettingRequest;
 import com.piggy.piggybackend.notification.dto.TargetPriceSettingResponse;
 import com.piggy.piggybackend.notification.service.ExchangeNotificationService;
 import com.piggy.piggybackend.user.entity.User;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +26,7 @@ public class ExchangeNotificationController {
 
     @PostMapping("/settings")
     public ResponseEntity<String> updateNotificationSetting(
-            @LoginUser User user,
+            @Parameter(hidden = true) @LoginUser User user,
             @Valid @RequestBody NotificationSettingRequest request) {
 
         notificationService.saveOrUpdateSetting(user.getEmail(), request);
@@ -50,7 +51,7 @@ public class ExchangeNotificationController {
 
     @PostMapping("/token")
     public ResponseEntity<String> updateFcmToken(
-            @LoginUser User user,
+            @Parameter(hidden = true) @LoginUser User user,
             @RequestBody Map<String, String> tokenRequest) {
 
         notificationService.updateUserFcmToken(user, tokenRequest.get("fcmToken"));
@@ -59,7 +60,7 @@ public class ExchangeNotificationController {
 
     @PostMapping("/target-price")
     public ResponseEntity<String> saveTargetPriceSetting(
-            @LoginUser User user,
+            @Parameter(hidden = true) @LoginUser User user,
             @Valid @RequestBody TargetPriceSettingRequest request) {
 
         notificationService.saveOrUpdateTargetPriceSetting(user.getEmail(), request);

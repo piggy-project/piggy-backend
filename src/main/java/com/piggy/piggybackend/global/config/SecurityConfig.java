@@ -59,7 +59,7 @@ public class SecurityConfig {
                                 "/users/password/**",
                                 "/password/reset",
                                 "/users/password/reset-request",
-                                "users/recover",
+                                "/users/recover",
                                 "/api/exchange/**",
                                 "/api/v1/shopping/**",
                                 "/api/exchange/simulate",
