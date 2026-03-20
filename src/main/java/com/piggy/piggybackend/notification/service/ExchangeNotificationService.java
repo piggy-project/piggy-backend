@@ -10,6 +10,7 @@ import com.piggy.piggybackend.notification.dto.TargetPriceSettingResponse;
 import com.piggy.piggybackend.notification.entity.ExchangeTargetPriceSetting;
 import com.piggy.piggybackend.notification.repository.ExchangeTargetPriceRepository;
 import com.piggy.piggybackend.user.entity.FcmToken;
+import com.piggy.piggybackend.user.repository.FcmTokenRepository;
 import com.piggy.piggybackend.user.service.FcmService;
 import com.piggy.piggybackend.notification.dto.NotificationListResponse;
 import com.piggy.piggybackend.notification.dto.NotificationSettingRequest;
@@ -44,6 +45,7 @@ public class ExchangeNotificationService {
     private final FcmService fcmService;
     private final FcmTokenService fcmTokenService;
     private final ExchangeTargetPriceRepository targetPriceRepository;
+    private final FcmTokenRepository fcmTokenRepository;
 
     private static final String REDIS_LIVE_RATES = "exchange:live";
     private static final int NOTIFICATION_COOLDOWN_HOURS = 6;
@@ -310,7 +312,12 @@ public class ExchangeNotificationService {
         }
         for (FcmToken fcmToken : fcmTokens) {
             try {
-                fcmService.sendPushNotification(fcmToken.getToken(), title, body);
+                boolean isValid = fcmService.sendPushNotification(fcmToken.getToken(), title, body);
+                //만료 토큰이면 DB에서 삭제
+                if (!isValid) {
+                    fcmTokenRepository.delete(fcmToken);
+                    log.info("[FCM 좀비 토큰 삭제] User: {}, token: {}", user.getEmail(), fcmToken.getToken());
+                }
             } catch (Exception e) {
                 log.error("[FCM 개별 발송 실패] User: {}, token: {}, error: {}",
                         user.getEmail(), fcmToken.getToken(), e.getMessage());
