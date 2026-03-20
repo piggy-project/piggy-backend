@@ -11,9 +11,11 @@ public class NotificationScheduler {
 
     private final ExchangeNotificationService notificationService;
 
-    // 매시 1분 0초에 실행 (0초 1분 *시 *일 *월 *요일)
     @Scheduled(cron = "0 1 * * * *")
     public void runExchangeCheck() {
-        notificationService.checkAndSendAlerts();
+        notificationService.checkAndSendAlerts();           // 기존 퍼센트 알림
+        notificationService.checkAndSendTargetPriceAlerts(); // 신규 목표가 알림
     }
+
+
 }

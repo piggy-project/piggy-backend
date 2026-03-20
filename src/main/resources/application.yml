@@ -162,3 +162,6 @@ app:
   frontend-url: https://piggys.mooo.com
   default:
     profile-image: https://piggy-project.s3.ap-northeast-2.amazonaws.com/default/profile.png
+
+firebase:
+  config-path: ${GOOGLE_APPLICATION_CREDENTIALS}

@@ -33,7 +33,9 @@ public enum ErrorCode {
 
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "EmptyComment","댓글을 찾을 수 없습니다."),
 
-    USER_WITHDRAWN(HttpStatus.FORBIDDEN, "UserWithDrawn", "탈퇴중인 회원입니다.");
+    USER_WITHDRAWN(HttpStatus.FORBIDDEN, "UserWithDrawn", "탈퇴중인 회원입니다."),
+    // 알림 관련 에러 코드 추가
+    NOTIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "NotificationNotFound", "존재하지 않는 알림 설정입니다.");
     private final HttpStatus httpStatus;
     private final String errorCode;
     private final String message;
