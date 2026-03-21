@@ -59,4 +59,31 @@ public class PostController {
             @LoginUser User user) {
         return ResponseEntity.ok(postService.toggleLike(postId, user));
     }
+
+    // 6. 실시간 핫 게시물(1위) 조회
+    @GetMapping("/hot")
+    public ResponseEntity<PostResponseDto> getTopHotPost(
+            @LoginUser User user) { // 현재 로그인 유저 정보 (좋아요 여부 확인용)
+
+        PostResponseDto hotPost = postService.getTopHotPost(user);
+
+        // 핫 게시물이 존재하고 로그인한 유저라면, 좋아요/본인글 여부 추가 세팅
+        if (hotPost != null && user != null) {
+            enrichPostDto(hotPost, user);
+        }
+
+        return ResponseEntity.ok(hotPost);
+    }
+
+    // DTO에 현재 로그인한 사용자의 상태(좋아요 여부, 본인 글 여부)를 입혀주는 메서드
+    private void enrichPostDto(PostResponseDto dto, User user) {
+        if (user != null && dto != null) {
+            // 1. 좋아요 여부 확인 (서비스의 public 메서드 호출)
+            dto.setLiked(postService.isUserLiked(dto.getId(), user.getId()));
+
+            // 2. 본인 글 여부 확인 (작성자 닉네임이나 ID로 비교)
+            // DTO의 닉네임과 현재 로그인 유저의 닉네임이 같으면 본인 글임
+            dto.setAuthor(dto.getAuthorNickname().equals(user.getNickname()));
+        }
+    }
 }

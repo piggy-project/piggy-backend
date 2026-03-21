@@ -32,6 +32,7 @@ public class PostService {
     private static final String LIKE_USERS_KEY = "post:like:users:";
     private static final String VIEW_RECORD_KEY = "post:view:record:";
     private static final String VIEW_COUNT_KEY = "post:view:count:";
+    private static final String HOT_RANKING_KEY = "posts:hot:ranking";
 
     // 1. 글 저장 (기존과 동일)
     @Transactional
@@ -93,18 +94,15 @@ public class PostService {
         String recordKey = VIEW_RECORD_KEY + postId + ":" + userId;
         String countKey = VIEW_COUNT_KEY + postId;
 
-        // 중복 조회 확인
         if (!redisTemplate.hasKey(recordKey)) {
-            // 처음 보는 유저라면 Redis의 전체 조회수 키를 1 증가시킴 (DB는 건드리지 않음!)
             if (!redisTemplate.hasKey(countKey)) {
-                // Redis에 키가 없으면 현재 DB 값을 가져와서 초기화 후 증가
                 redisTemplate.opsForValue().set(countKey, String.valueOf(post.getViewCount() + 1), java.time.Duration.ofDays(1));
             } else {
                 redisTemplate.opsForValue().increment(countKey);
             }
-
-            // 중복 방지 기록 저장 (24시간)
             redisTemplate.opsForValue().set(recordKey, "v", java.time.Duration.ofDays(1));
+
+            updateHotScore(post);
         }
     }
 
@@ -124,6 +122,8 @@ public class PostService {
         redisTemplate.delete(LIKE_USERS_KEY + postId);
         redisTemplate.delete(VIEW_COUNT_KEY + postId);
 
+        redisTemplate.opsForZSet().remove(HOT_RANKING_KEY, postId.toString());
+
         postRepository.delete(post);
     }
 
@@ -142,17 +142,58 @@ public class PostService {
 
         boolean isLiked;
         if (result != null && result > 0) {
-            // 1이 반환되면 새로 추가된 것 -> 좋아요
             redisTemplate.opsForValue().increment(countKey);
             isLiked = true;
         } else {
-            // 0이 반환되면 이미 있었던 것 -> 좋아요 취소
             redisTemplate.opsForSet().remove(userSetKey, user.getId().toString());
             redisTemplate.opsForValue().decrement(countKey);
             isLiked = false;
         }
+        updateHotScore(post);
+
         return new PostLikeResponseDto(isLiked, getLikeCount(postId, post.getLikeCount()));
     }
+
+    // 실시간 핫 점수 계산 및 랭킹 업데이트
+    public void updateHotScore(Post post) {
+        Long likes = getLikeCount(post.getId(), post.getLikeCount());
+        Long views = getViewCount(post.getId(), post.getViewCount());
+        Long comments = post.getCommentCount();
+
+        // 가중치 계산: (좋아요 * 10) + (댓글 * 20) + (조회수 * 1)
+        double score = (likes * 10.0) + (comments * 20.0) + (views * 1.0);
+
+        // Redis ZSet에 저장 (postId를 Key로, 계산된 score를 점수로 저장)
+        redisTemplate.opsForZSet().add(HOT_RANKING_KEY, post.getId().toString(), score);
+    }
+
+    @Transactional(readOnly = true)
+    public PostResponseDto getTopHotPost(User user) { // 📍 User 파라미터 추가
+        java.util.Set<String> topPostIdSet = redisTemplate.opsForZSet().reverseRange(HOT_RANKING_KEY, 0, 0);
+
+        if (topPostIdSet == null || topPostIdSet.isEmpty()) return null;
+
+        String topPostId = topPostIdSet.iterator().next();
+
+        return postRepository.findById(Long.parseLong(topPostId))
+                .map(post -> {
+                    PostResponseDto dto = convertToDto(post);
+                    if (user != null) {
+                        // 📍 1위 게시물에 대해 내가 좋아요를 눌렀는지 체크!
+                        dto.setLiked(isUserLiked(post.getId(), user.getId()));
+                        dto.setAuthor(post.getUser().getId().equals(user.getId()));
+                    }
+                    return dto;
+                })
+                .orElse(null);
+    }
+
+    // 매일 새벽 4시 랭킹을 초기화
+    @Scheduled(cron = "0 0 4 * * *")
+    public void resetHotRanking() {
+        redisTemplate.delete(HOT_RANKING_KEY);
+    }
+
     // 정각마다 조회수 & 좋아요 수를 DB에 일괄 업데이트
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
@@ -182,7 +223,7 @@ public class PostService {
 
     // --- Redis 헬퍼 메서드 ---
 
-    private boolean isUserLiked(Long postId, Long userId) {
+    public boolean isUserLiked(Long postId, Long userId) {
         // Redis Set에 해당 유저가 있는지 확인
         return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(LIKE_USERS_KEY + postId, userId.toString()));
     }

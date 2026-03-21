@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
+    private final PostService postService;
 
     @Transactional
     public CommentResponseDto createComment(Long postId, CommentRequestDto dto, User user) {
@@ -39,7 +40,7 @@ public class CommentService {
 
         // 게시글의 댓글 수 증가
         post.incrementCommentCount();
-
+        postService.updateHotScore(post);
         return convertToDto(comment, user);
     }
 
@@ -71,6 +72,7 @@ public class CommentService {
 
         // 게시글의 댓글 수 감소
         post.decrementCommentCount();
+        postService.updateHotScore(post);
     }
     // DTO 변환 헬퍼
     private CommentResponseDto convertToDto(Comment comment, User user) {
