@@ -5,20 +5,18 @@ import com.piggy.piggybackend.exchange.repository.ExchangeFavoriteRepository;
 import com.piggy.piggybackend.exchange.repository.ExchangeRateRepository;
 import com.piggy.piggybackend.global.exception.CustomException;
 import com.piggy.piggybackend.global.exception.ErrorCode;
-import com.piggy.piggybackend.notification.dto.TargetPriceSettingRequest;
-import com.piggy.piggybackend.notification.dto.TargetPriceSettingResponse;
-import com.piggy.piggybackend.notification.entity.ExchangeTargetPriceSetting;
-import com.piggy.piggybackend.notification.repository.ExchangeTargetPriceRepository;
-import com.piggy.piggybackend.user.entity.FcmToken;
-import com.piggy.piggybackend.user.repository.FcmTokenRepository;
-import com.piggy.piggybackend.user.service.FcmService;
 import com.piggy.piggybackend.notification.dto.NotificationListResponse;
 import com.piggy.piggybackend.notification.dto.NotificationSettingRequest;
+import com.piggy.piggybackend.notification.dto.TargetPriceSettingRequest;
+import com.piggy.piggybackend.notification.dto.TargetPriceSettingResponse;
 import com.piggy.piggybackend.notification.entity.ExchangeNotificationSetting;
+import com.piggy.piggybackend.notification.entity.ExchangeTargetPriceSetting;
 import com.piggy.piggybackend.notification.entity.ReferencePeriod;
 import com.piggy.piggybackend.notification.repository.ExchangeNotificationRepository;
+import com.piggy.piggybackend.notification.repository.ExchangeTargetPriceRepository;
 import com.piggy.piggybackend.user.entity.User;
 import com.piggy.piggybackend.user.repository.UserRepository;
+import com.piggy.piggybackend.user.service.FcmService;
 import com.piggy.piggybackend.user.service.FcmTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,7 +43,6 @@ public class ExchangeNotificationService {
     private final FcmService fcmService;
     private final FcmTokenService fcmTokenService;
     private final ExchangeTargetPriceRepository targetPriceRepository;
-    private final FcmTokenRepository fcmTokenRepository;
 
     private static final String REDIS_LIVE_RATES = "exchange:live";
     private static final int NOTIFICATION_COOLDOWN_HOURS = 6;
@@ -167,11 +164,10 @@ public class ExchangeNotificationService {
         String body = String.format("%s 대비 %.1f%% 변동! 현재가: %.2f원",
                 setting.getPeriod().getLabel(), fluctuation, currentRate);
 
-        sendPushToAllDevices(setting.getUser(), title, body);
+        fcmService.sendPushToUserDevices(setting.getUser(), title, body);
 
-        log.info("[FCM 발송 완료] User: {}, Currency: {}, 기기수: {}",
-                setting.getUser().getEmail(), setting.getCurrencyCode(),
-                setting.getUser().getFcmTokens().size());
+        log.info("[FCM 발송 완료] User: {}, Currency: {}",
+                setting.getUser().getEmail(), setting.getCurrencyCode());
     }
 
     @Transactional(readOnly = true)
@@ -298,31 +294,10 @@ public class ExchangeNotificationService {
                 setting.getDirection().getLabel(),
                 currentRate);
 
-        sendPushToAllDevices(setting.getUser(), title, body);
+        fcmService.sendPushToUserDevices(setting.getUser(), title, body);
 
         log.info("[목표가 FCM 발송] User: {}, Currency: {}, 현재가: {}",
                 setting.getUser().getEmail(), setting.getCurrencyCode(), currentRate);
-    }
-
-    private void sendPushToAllDevices(User user, String title, String body) {
-        List<FcmToken> fcmTokens = user.getFcmTokens();
-        if (fcmTokens == null || fcmTokens.isEmpty()) {
-            log.warn("[FCM 발송 건너뜀] User: {} 토큰 없음", user.getEmail());
-            return;
-        }
-        for (FcmToken fcmToken : fcmTokens) {
-            try {
-                boolean isValid = fcmService.sendPushNotification(fcmToken.getToken(), title, body);
-                //만료 토큰이면 DB에서 삭제
-                if (!isValid) {
-                    fcmTokenRepository.delete(fcmToken);
-                    log.info("[FCM 좀비 토큰 삭제] User: {}, token: {}", user.getEmail(), fcmToken.getToken());
-                }
-            } catch (Exception e) {
-                log.error("[FCM 개별 발송 실패] User: {}, token: {}, error: {}",
-                        user.getEmail(), fcmToken.getToken(), e.getMessage());
-            }
-        }
     }
 
     @Transactional(readOnly = true)
@@ -347,5 +322,35 @@ public class ExchangeNotificationService {
         }
 
         targetPriceRepository.delete(setting);
+    }
+
+    /** 최저가 알림 ON/OFF 토글 (즐겨찾기 기준) */
+    @Transactional
+    public boolean toggleLowestPriceAlert(String email, String currencyCode) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        com.piggy.piggybackend.exchange.entity.ExchangeFavorite favorite = favoriteRepository.findByUserAndCurrencyCode(user, currencyCode)
+                .orElseThrow(() -> new CustomException(ErrorCode.VALIDATION_ERROR, "즐겨찾기에 등록된 통화만 알림 설정이 가능합니다."));
+
+        boolean newStatus = !favorite.isLowestAlertOn();
+        favorite.toggleLowestAlert(newStatus);
+        log.info("[최저가 알림 토글] User: {}, Currency: {}, Status: {}", email, currencyCode, newStatus);
+        return newStatus;
+    }
+
+    /** 급변동 알림 ON/OFF 토글 (즐겨찾기 기준) */
+    @Transactional
+    public boolean toggleVolatilityAlert(String email, String currencyCode) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+
+        com.piggy.piggybackend.exchange.entity.ExchangeFavorite favorite = favoriteRepository.findByUserAndCurrencyCode(user, currencyCode)
+                .orElseThrow(() -> new CustomException(ErrorCode.VALIDATION_ERROR, "즐겨찾기에 등록된 통화만 알림 설정이 가능합니다."));
+
+        boolean newStatus = !favorite.isVolatilityAlertOn();
+        favorite.toggleVolatilityAlert(newStatus);
+        log.info("[급변동 알림 토글] User: {}, Currency: {}, Status: {}", email, currencyCode, newStatus);
+        return newStatus;
     }
 }

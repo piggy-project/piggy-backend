@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.piggy.piggybackend.exchange.dto.ExchangeDetailResponseDto;
 import com.piggy.piggybackend.exchange.dto.ExchangeHistoryResponseDto;
 import com.piggy.piggybackend.exchange.dto.ExchangeRankingResponseDto;
-import com.piggy.piggybackend.exchange.dto.ExchangeRateResponseDto;
 import com.piggy.piggybackend.exchange.entity.ExchangeRate;
 import com.piggy.piggybackend.exchange.repository.ExchangeRateRepository;
 import com.piggy.piggybackend.global.exception.CustomException;
@@ -40,6 +39,7 @@ public class ExchangeRateService {
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     private static final String REDIS_LIVE_RATES = "exchange:live";
+    private static final String REDIS_LIVE_RATES_HOUR_PREFIX = "exchange:live:h:"; // 시간별 스냅샷 (ex: exchange:live:h:14)
     private static final String REDIS_UPDATE_TIME = "exchange:time";
     private static final String REDIS_HIGH_RATES = "exchange:high";
     private static final String REDIS_LOW_RATES = "exchange:low";
@@ -65,6 +65,16 @@ public class ExchangeRateService {
     @Scheduled(cron = "0 0 * * * *")
     public void updateLiveRatesCache() {
         try {
+            // [추가] 새로운 데이터를 받아오기 전에 현재 데이터를 해당 시간의 스냅샷으로 저장 (25시간 유지)
+            Map<Object, Object> currentRates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
+            if (!currentRates.isEmpty()) {
+                String currentHour = LocalTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("HH"));
+                String historyKey = REDIS_LIVE_RATES_HOUR_PREFIX + currentHour;
+                redisTemplate.opsForHash().putAll(historyKey, currentRates);
+                redisTemplate.expire(historyKey, 25, java.util.concurrent.TimeUnit.HOURS);
+                log.info("Redis {}시 환율 스냅샷 저장 완료", currentHour);
+            }
+
             String url = ER_API_URL + "?api_key=" + erApiKey;
             HttpRequest request = HttpRequest.newBuilder().uri(URI.create(url)).GET().build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());

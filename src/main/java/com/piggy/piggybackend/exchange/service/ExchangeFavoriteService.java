@@ -39,7 +39,7 @@ public class ExchangeFavoriteService {
 
     @Transactional
     public boolean toggleFavorite(String email, String currencyCode) {
-        User user = getUser(email); // 여기서 로그인 검증 및 유저 조회가 한 번에 처리됨
+        User user = getUser(email);
 
         return favoriteRepository.findByUserAndCurrencyCode(user, currencyCode)
                 .map(existing -> {
@@ -92,12 +92,9 @@ public class ExchangeFavoriteService {
 
     // 에러 처리 로직
     private User getUser(String email) {
-        // 1. 익명 사용자(비로그인) 처리
         if (email == null || email.equals("anonymousUser")) {
             throw new CustomException(ErrorCode.LOGIN_REQUIRED);
         }
-
-        // 2. DB에 존재하지 않는 유저 처리
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }

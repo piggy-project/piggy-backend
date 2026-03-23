@@ -18,6 +18,9 @@ public interface ExchangeRateRepository extends JpaRepository<ExchangeRate, Long
     // 특정 통화의 모든 기록을 날짜 오름차순(과거 -> 현재)으로 가져옵니다.
     List<ExchangeRate> findAllByCurUnitOrderBySearchDateAsc(String curUnit);
 
+    // 특정 시점 이후의 최저가 환율 조회
+    Optional<ExchangeRate> findTopByCurUnitAndSearchDateGreaterThanEqualOrderByDealBasRAsc(String curUnit, String startDate);
+
     // 랭킹 조회용: 전 통화의 가장 최근 전일 마감가를 한 번에 조회 (N+1 방지)
     @Query("""
         SELECT e FROM ExchangeRate e
