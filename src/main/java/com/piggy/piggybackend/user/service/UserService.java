@@ -88,9 +88,8 @@ public class UserService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new CustomException(ErrorCode.INVALID_CREDENTIALS));
 
-        // 1. 탈퇴 유예 중인 회원인지 확인 (추가된 부분)
+        // 1. 탈퇴 유예 중인 회원인지 확인
         if (user.getDeletedAt() != null) {
-            // 프론트엔드에서 이 에러 코드를 받으면 "복구하시겠습니까?" 모달을 띄우도록 유도
             throw new CustomException(ErrorCode.USER_WITHDRAWN, "탈퇴 진행 중인 계정입니다. 계정을 복구하시겠습니까?");
         }
 
@@ -101,6 +100,9 @@ public class UserService {
         String accessToken = jwtUtil.generateAccessToken(user.getEmail());
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
+        // ✨ Redis에 리프레시 토큰 저장 (TTL 14일) - 버그 수정
+        redisTemplate.opsForValue().set("RT:" + user.getEmail(), refreshToken, 14, TimeUnit.DAYS);
+
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -108,64 +110,21 @@ public class UserService {
     }
 
 
-    //이메일 중복체크
+    // 이메일 중복체크 (형식 검증은 DTO/@Valid에서 수행)
+    @Transactional(readOnly = true)
     public EmailCheckResponse checkEmail(String email) {
-        System.out.println("클라이언트로부터 받은 이메일 값: " + email);
-        // null 또는 공백
-        if (email == null || email.isBlank()) {
-            throw new CustomException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "올바른 이메일 형식이 아닙니다."
-            );
-        }
-
-        // 형식 체크
-        String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
-        if (!email.matches(emailRegex)) {
-            throw new CustomException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "올바른 이메일 형식이 아닙니다."
-            );
-        }
-
-        // 중복 체크
         if (userRepository.existsByEmail(email)) {
-            throw new CustomException(
-                    ErrorCode.DUPLICATE_EMAIL,
-                    "이미 등록된 이메일입니다."
-            );
+            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }
-
         return new EmailCheckResponse(true);
     }
 
-    //닉네임 중복체크
+    // 닉네임 중복체크 (길이/형식 검증은 DTO/@Valid에서 수행)
+    @Transactional(readOnly = true)
     public EmailCheckResponse checkNickname(String nickname) {
-
-        // null 또는 공백
-        if (nickname == null || nickname.isBlank()) {
-            throw new CustomException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "닉네임 형식이 아닙니다."
-            );
-        }
-
-        // 길이 제한 (2~20자)
-        if (nickname.length() < 2 || nickname.length() > 20) {
-            throw new CustomException(
-                    ErrorCode.VALIDATION_ERROR,
-                    "닉네임 형식이 아닙니다."
-            );
-        }
-
-        // 중복 체크
         if (userRepository.existsByNickname(nickname)) {
-            throw new CustomException(
-                    ErrorCode.DUPLICATE_NICKNAME,
-                    "이미 사용중인 닉네임입니다."
-            );
+            throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
         }
-
         return new EmailCheckResponse(true);
     }
     // 내정보 조회
