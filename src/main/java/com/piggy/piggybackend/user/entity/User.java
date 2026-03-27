@@ -13,9 +13,8 @@ import java.util.List;
 
 @Entity
 @Getter
-@Setter
 @Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(name = "users",
         uniqueConstraints = {
@@ -80,6 +79,9 @@ public class User {
 
     // 소프트 삭제 메서드
     public void softDelete() {
+        if (this.deletedAt != null) {
+            throw new IllegalStateException("이미 탈퇴 처리된 회원입니다.");
+        }
         this.deletedAt = LocalDateTime.now();
     }
 
@@ -87,6 +89,7 @@ public class User {
     public void recover() {
         this.deletedAt = null;
     }
+
     public void updateProfileImage(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }
