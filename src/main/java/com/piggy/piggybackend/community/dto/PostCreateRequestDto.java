@@ -1,17 +1,16 @@
 package com.piggy.piggybackend.community.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import com.piggy.piggybackend.community.entity.BoardCategory;
+import lombok.*;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-// 게시글 생성 요청 DTO
 public class PostCreateRequestDto {
     private String title;
     private String content;
-    private String category;
+    private BoardCategory category;
+    private String code;
 }

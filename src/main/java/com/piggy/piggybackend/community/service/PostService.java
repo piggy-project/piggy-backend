@@ -3,6 +3,7 @@ package com.piggy.piggybackend.community.service;
 import com.piggy.piggybackend.community.dto.PostCreateRequestDto;
 import com.piggy.piggybackend.community.dto.PostLikeResponseDto;
 import com.piggy.piggybackend.community.dto.PostResponseDto;
+import com.piggy.piggybackend.community.entity.BoardCategory;
 import com.piggy.piggybackend.community.entity.Post;
 import com.piggy.piggybackend.community.entity.PostLike;
 import com.piggy.piggybackend.community.repository.PostLikeRepository;
@@ -34,7 +35,7 @@ public class PostService {
     private static final String VIEW_COUNT_KEY = "post:view:count:";
     private static final String HOT_RANKING_KEY = "posts:hot:ranking";
 
-    // 1. 글 저장 (기존과 동일)
+    // 1. 글 저장 (code 필드 추가)
     @Transactional
     public PostResponseDto createPost(PostCreateRequestDto dto, User user) {
         if (user == null) throw new CustomException(ErrorCode.LOGIN_REQUIRED);
@@ -43,6 +44,7 @@ public class PostService {
                 .title(dto.getTitle())
                 .content(dto.getContent())
                 .category(dto.getCategory())
+                .code(dto.getCode())
                 .user(user)
                 .build();
 
@@ -50,12 +52,24 @@ public class PostService {
         return convertToDto(savedPost);
     }
 
-    // 2. 목록 조회 (Redis 데이터 반영)
+    // 2. 목록 조회 (통화 코드 필터링 로직 추가)
     @Transactional(readOnly = true)
-    public List<PostResponseDto> getPosts(String category, String search, User user) {
-        List<Post> posts = (search == null || search.isBlank())
-                ? postRepository.findAllByCategoryOrderByCreatedAtDesc(category)
-                : postRepository.searchByCategoryAndKeyword(category, search);
+    public List<PostResponseDto> getPosts(BoardCategory category, String code, String search, User user) {
+        // "ALL"이 들어오면 필터링을 하지 않기 위해 null로 취급
+        String filterCode = ("ALL".equals(code) || code == null || code.isBlank()) ? null : code;
+
+        List<Post> posts;
+
+        if (search != null && !search.isBlank()) {
+            // filterCode가 null이면 인덱스 쿼리에서 필터링이 무시됩니다.
+            posts = postRepository.searchByCategoryAndCodeAndKeyword(category, filterCode, search);
+        } else if (filterCode != null) {
+            // 특정 국가 코드가 선택된 경우
+            posts = postRepository.findAllByCategoryAndCodeOrderByCreatedAtDesc(category, filterCode);
+        } else {
+            // "ALL" 이거나 코드가 없는 경우 해당 카테고리 전체 조회
+            posts = postRepository.findAllByCategoryOrderByCreatedAtDesc(category);
+        }
 
         return posts.stream().map(post -> {
             PostResponseDto dto = convertToDto(post);
@@ -70,19 +84,15 @@ public class PostService {
     // 3. 상세 조회 (Redis 데이터 반영)
     @Transactional
     public PostResponseDto getPostDetail(Long postId, User user) {
-        System.out.println(user);
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
 
-        // 조회수 증가 로직 (로그인 유저 중복 방지 포함)
         if (user != null) {
             handleViewCount(postId, user.getId(), post);
         }
 
-        // DTO 변환
         PostResponseDto dto = convertToDto(post);
 
-        // 상세 조회 시 redis 확인
         if (user != null) {
             dto.setLiked(isUserLiked(postId, user.getId()));
             dto.setAuthor(post.getUser().getId().equals(user.getId()));
@@ -254,6 +264,7 @@ public class PostService {
                 .title(post.getTitle())
                 .content(post.getContent())
                 .category(post.getCategory())
+                .code(post.getCode())
                 .viewCount(getViewCount(post.getId(), post.getViewCount()))
                 .likeCount(getLikeCount(post.getId(), post.getLikeCount()))
                 .commentCount(post.getCommentCount())

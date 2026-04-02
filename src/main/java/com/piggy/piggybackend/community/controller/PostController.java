@@ -3,6 +3,7 @@ package com.piggy.piggybackend.community.controller;
 import com.piggy.piggybackend.community.dto.PostCreateRequestDto;
 import com.piggy.piggybackend.community.dto.PostLikeResponseDto;
 import com.piggy.piggybackend.community.dto.PostResponseDto;
+import com.piggy.piggybackend.community.entity.BoardCategory;
 import com.piggy.piggybackend.community.service.PostService;
 import com.piggy.piggybackend.global.util.LoginUser;
 import com.piggy.piggybackend.user.entity.User;
@@ -19,21 +20,22 @@ public class PostController {
 
     private final PostService postService;
 
-    // 1. 게시글 생성
+    // 1. 게시글 생성 (DTO에 code가 포함되어야 함)
     @PostMapping
     public ResponseEntity<PostResponseDto> createPost(
             @RequestBody PostCreateRequestDto dto,
-            @LoginUser User user) { // 인증된 현재 사용자 정보
+            @LoginUser User user) {
         return ResponseEntity.ok(postService.createPost(dto, user));
     }
 
-    // 2. 게시글 목록 조회
+    // 2. 게시글 목록 조회 (code 파라미터 추가)
     @GetMapping
     public ResponseEntity<List<PostResponseDto>> getPosts(
-            @RequestParam String category,
+            @RequestParam BoardCategory category, // String에서 Enum으로 자동 변환됨
+            @RequestParam(required = false) String code, // 통화 코드 (USD, JPY 등)
             @RequestParam(required = false, defaultValue = "") String search,
             @LoginUser User user) {
-        return ResponseEntity.ok(postService.getPosts(category, search, user));
+        return ResponseEntity.ok(postService.getPosts(category, code, search, user));
     }
 
     // 3. 게시글 상세 조회

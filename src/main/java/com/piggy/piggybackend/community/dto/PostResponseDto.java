@@ -1,6 +1,7 @@
 package com.piggy.piggybackend.community.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.piggy.piggybackend.community.entity.BoardCategory;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -14,7 +15,8 @@ public class PostResponseDto {
     private Long id;
     private String title;
     private String content;
-    private String category;
+    private BoardCategory category;
+    private String code;
     private Long viewCount;
     private Long likeCount;
     private Long commentCount;

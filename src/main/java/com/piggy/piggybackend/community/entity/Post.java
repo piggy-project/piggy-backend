@@ -12,7 +12,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "posts")
+@Table(name = "posts", indexes = {
+        @Index(name = "idx_post_category", columnList = "category"),
+        @Index(name = "idx_post_category_code", columnList = "category, code")
+})
 @Getter
 @Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -39,8 +42,9 @@ public class Post {
     @Builder.Default
     private Long likeCount = 0L; // 좋아요 수 (기본값 0)
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String category; // 게시판 종류 (환율 수다방, 여행 공유방 등)
+    private BoardCategory category;
 
     @Column(length = 10)
     private String code; // 통화 코드 (해당 글이 어떤 국가와 관련 있는지)

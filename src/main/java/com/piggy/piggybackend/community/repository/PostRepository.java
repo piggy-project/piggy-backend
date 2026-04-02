@@ -1,5 +1,6 @@
 package com.piggy.piggybackend.community.repository;
 
+import com.piggy.piggybackend.community.entity.BoardCategory;
 import com.piggy.piggybackend.community.entity.Post;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,16 +12,21 @@ import java.util.List;
 @Repository
 public interface PostRepository extends JpaRepository<Post, Long> {
 
-    // 1. 카테고리별 게시글 목록 최신순 조회
-    List<Post> findAllByCategoryOrderByCreatedAtDesc(String category);
+    // 1. 카테고리별 조회 (전체)
+    List<Post> findAllByCategoryOrderByCreatedAtDesc(BoardCategory category);
 
-    // 2. 특정 카테고리 내에서 제목이나 내용에 검색어가 포함된 게시글 조회
+    // 2. 카테고리 + 통화 코드별 조회 (환율 게시판 전용)
+    List<Post> findAllByCategoryAndCodeOrderByCreatedAtDesc(BoardCategory category, String code);
+
+    // 3. 검색 (카테고리 + 통화코드 선택적 + 키워드)
     @Query("SELECT p FROM Post p WHERE p.category = :category " +
+            "AND (:code IS NULL OR p.code = :code) " +
             "AND (p.title LIKE %:search% OR p.content LIKE %:search%) " +
             "ORDER BY p.createdAt DESC")
-    List<Post> searchByCategoryAndKeyword(@Param("category") String category,
-                                          @Param("search") String search);
+    List<Post> searchByCategoryAndCodeAndKeyword(@Param("category") BoardCategory category,
+                                                 @Param("code") String code,
+                                                 @Param("search") String search);
 
-    // 3. 특정 사용자가 쓴 글 목록 조회 (마이페이지용)
+    // 4. 특정 사용자가 쓴 글
     List<Post> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 }
