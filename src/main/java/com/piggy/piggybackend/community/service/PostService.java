@@ -3,6 +3,7 @@ package com.piggy.piggybackend.community.service;
 import com.piggy.piggybackend.community.dto.PostCreateRequestDto;
 import com.piggy.piggybackend.community.dto.PostLikeResponseDto;
 import com.piggy.piggybackend.community.dto.PostResponseDto;
+import com.piggy.piggybackend.community.dto.PostUpdateRequestDto;
 import com.piggy.piggybackend.community.entity.BoardCategory;
 import com.piggy.piggybackend.community.entity.Post;
 import com.piggy.piggybackend.community.entity.PostLike;
@@ -148,6 +149,42 @@ public class PostService {
         redisTemplate.opsForZSet().remove(HOT_RANKING_KEY, postId.toString());
 
         postRepository.delete(post);
+    }
+
+    @Transactional
+    public PostResponseDto updatePost(Long postId, PostUpdateRequestDto dto, User user) {
+        // 1. 로그인 체크
+        if (user == null) throw new CustomException(ErrorCode.LOGIN_REQUIRED);
+
+        // 2. 게시글 존재 여부 확인
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new CustomException(ErrorCode.POST_NOT_FOUND));
+
+        // 3. 본인 확인 로직
+        if (!post.getUser().getId().equals(user.getId())) {
+            throw new CustomException(ErrorCode.NOT_AUTHORIZED);
+        }
+
+        // 4. 이미지 처리 로직
+        if (dto.isRemoveImage()) {
+            // 이미지 삭제 요청이 온 경우
+            if (post.getImageUrl() != null) {
+                s3Service.delete(post.getImageUrl());
+                post.setImageUrl(null);
+            }
+        } else if (dto.getImage() != null && !dto.getImage().isEmpty()) {
+            // 새 이미지가 업로드된 경우 (기존 이미지 삭제 후 업로드)
+            if (post.getImageUrl() != null) {
+                s3Service.delete(post.getImageUrl());
+            }
+            String newImageUrl = s3Service.upload(dto.getImage(), "community");
+            post.setImageUrl(newImageUrl);
+        }
+
+        // 5. 텍스트 정보 업데이트 (Dirty Checking 활용)
+        post.update(dto.getTitle(), dto.getContent(), dto.getCode());
+
+        return convertToDto(post);
     }
 
     // 5. 좋아요 토글 (DB 부하 경감 방식)

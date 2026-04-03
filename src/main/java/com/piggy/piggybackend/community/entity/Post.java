@@ -112,4 +112,12 @@ public class Post {
             this.commentCount--;
         }
     }
+    public void update(String title, String content, String code) {
+        this.title = title;
+        this.content = content;
+        this.code = code;
+    }
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
 }

@@ -3,6 +3,7 @@ package com.piggy.piggybackend.community.controller;
 import com.piggy.piggybackend.community.dto.PostCreateRequestDto;
 import com.piggy.piggybackend.community.dto.PostLikeResponseDto;
 import com.piggy.piggybackend.community.dto.PostResponseDto;
+import com.piggy.piggybackend.community.dto.PostUpdateRequestDto;
 import com.piggy.piggybackend.community.entity.BoardCategory;
 import com.piggy.piggybackend.community.service.PostService;
 import com.piggy.piggybackend.global.util.LoginUser;
@@ -76,6 +77,15 @@ public class PostController {
         }
 
         return ResponseEntity.ok(hotPost);
+    }
+
+    // 7. 게시글 수정
+    @PatchMapping(value = "/{postId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PostResponseDto> updatePost(
+            @PathVariable Long postId,
+            @ModelAttribute PostUpdateRequestDto dto,
+            @LoginUser User user) {
+        return ResponseEntity.ok(postService.updatePost(postId, dto, user));
     }
 
     // DTO에 현재 로그인한 사용자의 상태(좋아요 여부, 본인 글 여부)를 입혀주는 메서드
