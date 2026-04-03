@@ -74,6 +74,9 @@ public class Post {
     @OrderBy("createdAt ASC") // 댓글은 작성순으로 정렬
     private List<Comment> comments = new ArrayList<>();
 
+    @Column(length = 500)
+    private String imageUrl;
+
     // --- 비즈니스 로직 ---
 
     // 조회수 증가

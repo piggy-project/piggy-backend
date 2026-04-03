@@ -3,6 +3,7 @@ package com.piggy.piggybackend.community.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.piggy.piggybackend.community.entity.BoardCategory;
 import lombok.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -23,6 +24,7 @@ public class PostResponseDto {
     private String authorNickname;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String imageUrl;
 
     @JsonProperty("isLiked")
     private boolean isLiked;

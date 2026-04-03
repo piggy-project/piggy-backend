@@ -8,6 +8,7 @@ import com.piggy.piggybackend.community.service.PostService;
 import com.piggy.piggybackend.global.util.LoginUser;
 import com.piggy.piggybackend.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,9 +22,9 @@ public class PostController {
     private final PostService postService;
 
     // 1. 게시글 생성 (DTO에 code가 포함되어야 함)
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<PostResponseDto> createPost(
-            @RequestBody PostCreateRequestDto dto,
+            @ModelAttribute PostCreateRequestDto dto,
             @LoginUser User user) {
         return ResponseEntity.ok(postService.createPost(dto, user));
     }

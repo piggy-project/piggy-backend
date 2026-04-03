@@ -10,6 +10,7 @@ import com.piggy.piggybackend.community.repository.PostLikeRepository;
 import com.piggy.piggybackend.community.repository.PostRepository;
 import com.piggy.piggybackend.global.exception.CustomException;
 import com.piggy.piggybackend.global.exception.ErrorCode;
+import com.piggy.piggybackend.global.service.S3Service;
 import com.piggy.piggybackend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -28,6 +29,7 @@ public class PostService {
     private final PostRepository postRepository;
     private final PostLikeRepository postLikeRepository;
     private final StringRedisTemplate redisTemplate;
+    private final S3Service s3Service;
 
     private static final String LIKE_COUNT_KEY = "post:like:count:";
     private static final String LIKE_USERS_KEY = "post:like:users:";
@@ -40,11 +42,18 @@ public class PostService {
     public PostResponseDto createPost(PostCreateRequestDto dto, User user) {
         if (user == null) throw new CustomException(ErrorCode.LOGIN_REQUIRED);
 
+        // 이미지 업로드 처리
+        String imageUrl = null;
+        if (dto.getImage() != null && !dto.getImage().isEmpty()) {
+            imageUrl = s3Service.upload(dto.getImage(), "community");
+        }
+
         Post post = Post.builder()
                 .title(dto.getTitle())
                 .content(dto.getContent())
                 .category(dto.getCategory())
                 .code(dto.getCode())
+                .imageUrl(imageUrl)
                 .user(user)
                 .build();
 
@@ -126,6 +135,10 @@ public class PostService {
         if (!post.getUser().getId().equals(user.getId())) {
             throw new CustomException(ErrorCode.NOT_AUTHORIZED);
         }
+        // 게시글 삭제 시 S3에 있는 이미지도 함께 삭제
+        if (post.getImageUrl() != null) {
+            s3Service.delete(post.getImageUrl());
+        }
 
         // 삭제 시 Redis 키도 함께 삭제
         redisTemplate.delete(LIKE_COUNT_KEY + postId);
@@ -178,7 +191,7 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
-    public PostResponseDto getTopHotPost(User user) { // 📍 User 파라미터 추가
+    public PostResponseDto getTopHotPost(User user) {
         java.util.Set<String> topPostIdSet = redisTemplate.opsForZSet().reverseRange(HOT_RANKING_KEY, 0, 0);
 
         if (topPostIdSet == null || topPostIdSet.isEmpty()) return null;
@@ -189,7 +202,7 @@ public class PostService {
                 .map(post -> {
                     PostResponseDto dto = convertToDto(post);
                     if (user != null) {
-                        // 📍 1위 게시물에 대해 내가 좋아요를 눌렀는지 체크!
+                        // 1위 게시물에 대해 내가 좋아요를 눌렀는지 체크!
                         dto.setLiked(isUserLiked(post.getId(), user.getId()));
                         dto.setAuthor(post.getUser().getId().equals(user.getId()));
                     }
@@ -271,6 +284,7 @@ public class PostService {
                 .authorNickname(post.getUser().getNickname())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
+                .imageUrl(post.getImageUrl())
                 .build();
     }
 }
