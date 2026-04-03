@@ -25,6 +25,7 @@ public class PostResponseDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String imageUrl;
+    private String userProfileUrl;
 
     @JsonProperty("isLiked")
     private boolean isLiked;

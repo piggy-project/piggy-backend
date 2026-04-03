@@ -285,6 +285,7 @@ public class PostService {
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .imageUrl(post.getImageUrl())
+                .userProfileUrl(post.getUser().getProfileImageUrl())
                 .build();
     }
 }
