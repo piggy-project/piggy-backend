@@ -36,7 +36,8 @@ public class S3Service {
         try {
             // 1. 리사이징 (300x300)
             BufferedImage resizedImage = Thumbnails.of(file.getInputStream())
-                    .size(300, 300)
+                    .size(1080, 1080)
+                    .outputQuality(0.85)
                     .outputFormat("jpg")
                     .asBufferedImage();
 
