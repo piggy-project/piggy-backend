@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.piggy.piggybackend.exchange.dto.ExchangeDetailResponseDto;
 import com.piggy.piggybackend.exchange.dto.ExchangeHistoryResponseDto;
 import com.piggy.piggybackend.exchange.dto.ExchangeRankingResponseDto;
+import com.piggy.piggybackend.exchange.dto.ExchangeTimingResponseDto;
 import com.piggy.piggybackend.exchange.entity.ExchangeRate;
 import com.piggy.piggybackend.exchange.repository.ExchangeRateRepository;
 import com.piggy.piggybackend.global.exception.CustomException;
@@ -43,6 +44,7 @@ public class ExchangeRateService {
     private static final String REDIS_UPDATE_TIME = "exchange:time";
     private static final String REDIS_HIGH_RATES = "exchange:high";
     private static final String REDIS_LOW_RATES = "exchange:low";
+    private static final String REDIS_TIMING_PREFIX = "timing:";
 
     private static final Map<String, String> currencyMap = Map.ofEntries(
             Map.entry("JPY", "일본 엔"),
@@ -111,9 +113,42 @@ public class ExchangeRateService {
             redisTemplate.opsForValue().set(REDIS_UPDATE_TIME, nowTime);
             log.info("Redis 환율 업데이트 완료: {}", nowTime);
 
+            updateTimingCache();
+
         } catch (Exception e) {
             log.error("Redis 환율 갱신 중 예외 발생: {}", e.getMessage());
         }
+    }
+
+    public void updateTimingCache() {
+        String startDate = LocalDate.now(ZoneId.of("Asia/Seoul")).minusDays(90)
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+        currencyMap.keySet().forEach(code -> {
+            try {
+                Object rateObj = redisTemplate.opsForHash().get(REDIS_LIVE_RATES, code);
+                if (rateObj == null) return;
+                double currentRate = Double.parseDouble(rateObj.toString());
+
+                String dbCode = "JPY".equals(code) ? "JPY(100)" : code;
+                List<ExchangeRate> history = repository.findRecentRates(dbCode, startDate);
+                if (history.isEmpty()) return;
+
+                long higherCount = history.stream()
+                        .filter(e -> e.getDealBasR() > currentRate)
+                        .count();
+                int percentile = (int) Math.round((double) higherCount / history.size() * 100);
+
+                redisTemplate.opsForValue().set(
+                        REDIS_TIMING_PREFIX + code,
+                        String.valueOf(percentile),
+                        1, java.util.concurrent.TimeUnit.HOURS
+                );
+            } catch (Exception e) {
+                log.warn("[타이밍] {} 계산 실패: {}", code, e.getMessage());
+            }
+        });
+        log.info("환율 타이밍 캐시 업데이트 완료");
     }
 
     // 고가/저가 업데이트
@@ -275,6 +310,26 @@ public class ExchangeRateService {
         };
 
         return result.stream().sorted(comparator).collect(Collectors.toList());
+    }
+
+    // 환율 타이밍 조회
+    public ExchangeTimingResponseDto getExchangeTiming(String code) {
+        if (!currencyMap.containsKey(code)) {
+            throw new CustomException(ErrorCode.GRAPH_NOT_SUPPORTED);
+        }
+
+        String cached = redisTemplate.opsForValue().get(REDIS_TIMING_PREFIX + code);
+        if (cached != null) {
+            return new ExchangeTimingResponseDto(code, Integer.parseInt(cached));
+        }
+
+        // 캐시 미스 시 직접 계산
+        updateTimingCache();
+        String recalculated = redisTemplate.opsForValue().get(REDIS_TIMING_PREFIX + code);
+        if (recalculated == null) {
+            throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
+        }
+        return new ExchangeTimingResponseDto(code, Integer.parseInt(recalculated));
     }
 
     // 전일 마감가 DB 조회 로직

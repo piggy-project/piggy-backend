@@ -30,4 +30,8 @@ public interface ExchangeRateRepository extends JpaRepository<ExchangeRate, Long
         )
     """)
     List<ExchangeRate> findLatestBeforeDate(@Param("today") String today);
+
+    // 타이밍 추천용: 특정 통화의 최근 90일 데이터 조회
+    @Query("SELECT e FROM ExchangeRate e WHERE e.curUnit = :curUnit AND e.searchDate >= :startDate ORDER BY e.searchDate ASC")
+    List<ExchangeRate> findRecentRates(@Param("curUnit") String curUnit, @Param("startDate") String startDate);
 }
