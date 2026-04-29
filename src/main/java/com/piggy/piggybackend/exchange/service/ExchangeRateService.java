@@ -40,11 +40,12 @@ public class ExchangeRateService {
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     private static final String REDIS_LIVE_RATES = "exchange:live";
-    private static final String REDIS_LIVE_RATES_HOUR_PREFIX = "exchange:live:h:"; // 시간별 스냅샷 (ex: exchange:live:h:14)
+    private static final String REDIS_LIVE_RATES_HOUR_PREFIX = "exchange:live:h:";
     private static final String REDIS_UPDATE_TIME = "exchange:time";
     private static final String REDIS_HIGH_RATES = "exchange:high";
     private static final String REDIS_LOW_RATES = "exchange:low";
     private static final String REDIS_TIMING_PREFIX = "timing:";
+    private static final String REDIS_YESTERDAY_RATES = "exchange:yesterday";
 
     private static final Map<String, String> currencyMap = Map.ofEntries(
             Map.entry("JPY", "일본 엔"),
@@ -199,6 +200,17 @@ public class ExchangeRateService {
 
         repository.saveAll(closingRates);
         log.info("[{}] Redis 데이터를 기반으로 전일 마감 환율 DB 저장 완료", yesterday);
+
+        // 전일 마감가 Redis 캐시 갱신 (매 요청 DB 조회 방지)
+        Map<String, String> yesterdayCache = rates.entrySet().stream()
+                .filter(e -> currencyMap.containsKey(e.getKey().toString()))
+                .collect(Collectors.toMap(
+                        e -> e.getKey().toString(),
+                        e -> e.getValue().toString()
+                ));
+        redisTemplate.opsForHash().putAll(REDIS_YESTERDAY_RATES, yesterdayCache);
+        redisTemplate.expire(REDIS_YESTERDAY_RATES, 25, java.util.concurrent.TimeUnit.HOURS);
+        log.info("전일 마감 환율 Redis 캐시 갱신 완료");
     }
 
     // 상세 환율 조회 (Redis 기반)
@@ -221,16 +233,21 @@ public class ExchangeRateService {
         String todayStr = LocalDate.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String dbCode = "JPY".equals(code) ? "JPY(100)" : code;
 
-        Optional<ExchangeRate> yesterdayOpt = repository.findTopByCurUnitAndSearchDateBeforeOrderBySearchDateDesc(dbCode, todayStr);
+        // 전일 마감가 Redis 캐시 우선 조회, 없으면 DB 폴백
+        Object yesterdayObj = redisTemplate.opsForHash().get(REDIS_YESTERDAY_RATES, code);
+        double yesterdayRate;
+        if (yesterdayObj != null) {
+            yesterdayRate = Double.parseDouble(yesterdayObj.toString());
+        } else {
+            Optional<ExchangeRate> yesterdayOpt = repository.findTopByCurUnitAndSearchDateBeforeOrderBySearchDateDesc(dbCode, todayStr);
+            yesterdayRate = yesterdayOpt.map(ExchangeRate::getDealBasR).orElse(currentRate);
+        }
 
         double change = 0.0;
         double percentChange = 0.0;
-        if (yesterdayOpt.isPresent()) {
-            double yesterdayRate = yesterdayOpt.get().getDealBasR();
-            if (yesterdayRate > 0) {
-                change = currentRate - yesterdayRate;
-                percentChange = (change / yesterdayRate) * 100;
-            }
+        if (yesterdayRate > 0) {
+            change = currentRate - yesterdayRate;
+            percentChange = (change / yesterdayRate) * 100;
         }
 
         Object high = redisTemplate.opsForHash().get(REDIS_HIGH_RATES, code);
@@ -265,14 +282,31 @@ public class ExchangeRateService {
         String baseTime = now.format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:00"));
         String todayStr = LocalDate.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-        // 전일 마감가 DB에서 한 번에 조회 (N+1 방지)
-        List<ExchangeRate> yesterdayRates = repository.findLatestBeforeDate(todayStr);
-        Map<String, Double> yesterdayRateMap = yesterdayRates.stream()
-                .collect(Collectors.toMap(
-                        e -> "JPY(100)".equals(e.getCurUnit()) ? "JPY" : e.getCurUnit(),
-                        ExchangeRate::getDealBasR,
-                        (a, b) -> a // 중복 키 발생 시 첫 번째 값 유지
-                ));
+        // 전일 마감가 Redis 캐시 우선 조회, 없으면 DB 폴백
+        Map<Object, Object> yesterdayRedis = redisTemplate.opsForHash().entries(REDIS_YESTERDAY_RATES);
+        Map<String, Double> yesterdayRateMap;
+        if (!yesterdayRedis.isEmpty()) {
+            yesterdayRateMap = yesterdayRedis.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            e -> e.getKey().toString(),
+                            e -> Double.parseDouble(e.getValue().toString())
+                    ));
+        } else {
+            List<ExchangeRate> yesterdayRates = repository.findLatestBeforeDate(todayStr);
+            yesterdayRateMap = yesterdayRates.stream()
+                    .collect(Collectors.toMap(
+                            e -> "JPY(100)".equals(e.getCurUnit()) ? "JPY" : e.getCurUnit(),
+                            ExchangeRate::getDealBasR,
+                            (a, b) -> a
+                    ));
+            // DB 조회 결과를 캐시에 저장
+            Map<String, String> toCache = yesterdayRateMap.entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, e -> String.valueOf(e.getValue())));
+            if (!toCache.isEmpty()) {
+                redisTemplate.opsForHash().putAll(REDIS_YESTERDAY_RATES, toCache);
+                redisTemplate.expire(REDIS_YESTERDAY_RATES, 25, java.util.concurrent.TimeUnit.HOURS);
+            }
+        }
 
         // DTO 변환
         List<ExchangeRankingResponseDto> result = liveRates.entrySet().stream()
