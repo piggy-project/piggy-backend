@@ -13,4 +13,5 @@ public class ExchangeRankingResponseDto {
     private double change;        // 전일 대비 변동폭
     private double percentChange; // 전일 대비 등락률 (%)
     private String time;          // 환율 기준 시간
+    private Integer timing;       // 최근 90일 대비 백분위 (환율 저렴도)
 }

@@ -253,6 +253,10 @@ public class ExchangeRateService {
         Object high = redisTemplate.opsForHash().get(REDIS_HIGH_RATES, code);
         Object low = redisTemplate.opsForHash().get(REDIS_LOW_RATES, code);
 
+        // 타이밍(백분위) 정보 추가
+        String timingCached = redisTemplate.opsForValue().get(REDIS_TIMING_PREFIX + code);
+        Integer timing = timingCached != null ? Integer.parseInt(timingCached) : null;
+
         return ExchangeDetailResponseDto.builder()
                 .code(code)
                 .currentRate(currentRate)
@@ -260,6 +264,7 @@ public class ExchangeRateService {
                 .percentChange(Math.round(percentChange * 100) / 100.0)
                 .high(high != null ? Double.parseDouble(high.toString()) : currentRate)
                 .low(low != null ? Double.parseDouble(low.toString()) : currentRate)
+                .timing(timing)
                 .build();
     }
 
@@ -409,5 +414,8 @@ public class ExchangeRateService {
                     return new ExchangeHistoryResponseDto(formattedDate, record.getDealBasR());
                 })
                 .collect(Collectors.toList());
+    }
+}
+      .collect(Collectors.toList());
     }
 }

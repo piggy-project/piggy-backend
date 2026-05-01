@@ -17,4 +17,5 @@ public class ExchangeDetailResponseDto {
     private Double low;
     private Double change;
     private Double percentChange;
+    private Integer timing;       // 최근 90일 대비 백분위 (환율 저렴도)
 }
