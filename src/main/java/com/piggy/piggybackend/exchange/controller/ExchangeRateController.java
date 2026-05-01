@@ -31,6 +31,12 @@ public class ExchangeRateController {
             @RequestParam String code) { // @PathVariable 대신 @RequestParam 사용
         return ResponseEntity.ok(exchangeRateService.getExchangeHistory(code));
     }
+    // 일일 시간별 환율 히스토리 조회 (09:00 ~ 22:00)
+    @GetMapping("/history/daily/{code}")
+    public ResponseEntity<List<ExchangeHistoryResponseDto>> getDailyHourlyHistory(
+            @PathVariable String code) {
+        return ResponseEntity.ok(exchangeRateService.getDailyHourlyHistory(code));
+    }
 
     // 환율 리스트 및 랭킹 조회
     // sort: RISE(급상승), FALL(급하락), HIGH(환율 높은순), LOW(환율 낮은순)

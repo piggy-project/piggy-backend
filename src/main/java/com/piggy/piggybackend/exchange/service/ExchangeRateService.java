@@ -263,6 +263,38 @@ public class ExchangeRateService {
                 .build();
     }
 
+    // 일일 시간별(09:00 ~ 22:00) 환율 내역 조회
+    public List<ExchangeHistoryResponseDto> getDailyHourlyHistory(String code) {
+        List<ExchangeHistoryResponseDto> hourlyHistory = new ArrayList<>();
+
+        // 09시부터 22시까지 Redis에 저장된 스냅샷을 순회
+        for (int h = 9; h <= 22; h++) {
+            String hourStr = String.format("%02d", h); // "09", "10" ...
+            String historyKey = REDIS_LIVE_RATES_HOUR_PREFIX + hourStr;
+
+            Object rateObj = redisTemplate.opsForHash().get(historyKey, code);
+
+            if (rateObj != null) {
+                // 프론트엔드 기대 형식인 "HH:00"으로 시간 포맷팅
+                hourlyHistory.add(new ExchangeHistoryResponseDto(
+                        hourStr + ":00",
+                        Double.parseDouble(rateObj.toString())
+                ));
+            }
+        }
+
+        // 만약 오늘 데이터가 하나도 없다면(오전 9시 이전 등), 현재가라도 하나 넣어줌
+        if (hourlyHistory.isEmpty()) {
+            Object currentRate = redisTemplate.opsForHash().get(REDIS_LIVE_RATES, code);
+            if (currentRate != null) {
+                String nowHour = LocalTime.now(ZoneId.of("Asia/Seoul")).format(DateTimeFormatter.ofPattern("HH:00"));
+                hourlyHistory.add(new ExchangeHistoryResponseDto(nowHour, Double.parseDouble(currentRate.toString())));
+            }
+        }
+
+        return hourlyHistory;
+    }
+
     // 환율 리스트 조회 및 정렬
     // sort: RISE(급상승), FALL(급하락), HIGH(환율 높은순), LOW(환율 낮은순)
     @Transactional(readOnly = true)
