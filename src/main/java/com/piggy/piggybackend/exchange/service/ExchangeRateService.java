@@ -360,6 +360,10 @@ public class ExchangeRateService {
                         percentChange = (change / yesterdayRate) * 100;
                     }
 
+                    // 타이밍(백분위) 정보 추가
+                    String timingCached = redisTemplate.opsForValue().get(REDIS_TIMING_PREFIX + code);
+                    Integer timing = timingCached != null ? Integer.parseInt(timingCached) : null;
+
                     return ExchangeRankingResponseDto.builder()
                             .curUnit(code)
                             .curNm(currencyMap.get(code))
@@ -367,6 +371,7 @@ public class ExchangeRateService {
                             .change(Math.round(change * 100) / 100.0)
                             .percentChange(Math.round(percentChange * 100) / 100.0)
                             .time(baseTime)
+                            .timing(timing)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -414,8 +419,5 @@ public class ExchangeRateService {
                     return new ExchangeHistoryResponseDto(formattedDate, record.getDealBasR());
                 })
                 .collect(Collectors.toList());
-    }
-}
-      .collect(Collectors.toList());
     }
 }
