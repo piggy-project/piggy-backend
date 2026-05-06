@@ -108,15 +108,15 @@ rakuten:
     application-id: ${RAKUTEN_APP_ID}
     access-key: ${RAKUTEN_ACCESS_KEY}
     url: https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601
-  data:
-    redis:
-      host: redis
-      port: 6379
-      password: REMOVED
-      lettuce:
-        pool:
-          max-active: 8 # 커넥션 풀 설정 (필요 시)
-          max-idle: 8
+data:
+  redis:
+    host: redis
+    port: 6379
+    password: REMOVED
+    lettuce:
+      pool:
+        max-active: 8 # 커넥션 풀 설정 (필요 시)
+        max-idle: 8
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}
