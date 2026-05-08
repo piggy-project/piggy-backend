@@ -228,6 +228,7 @@ public class ChatbotService {
 
                 반드시 아래 JSON 형식으로만 응답하세요. 마크다운이나 다른 텍스트는 절대 포함하지 마세요.
                 UI 관련 질문이면 navigationLinks를 채우고, 아니면 빈 배열로 두세요.
+                suggestedQuestions는 반드시 정확히 2개만 반환하세요.
                 {
                   "answer": "질문에 대한 친절한 답변 (3줄 이내)",
                   "navigationLinks": [
