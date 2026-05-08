@@ -234,8 +234,8 @@ public class ChatbotService {
                     { "label": "버튼에 표시될 텍스트", "route": "위 5개 경로 중 하나" }
                   ],
                   "suggestedQuestions": [
-                    { "question": "예상 후속 질문 1", "preview": "한 줄 답변 요약" },
-                    { "question": "예상 후속 질문 2", "preview": "한 줄 답변 요약" }
+                    { "question": "예상 후속 질문 1" },
+                    { "question": "예상 후속 질문 2" }
                   ]
                 }
                 """;

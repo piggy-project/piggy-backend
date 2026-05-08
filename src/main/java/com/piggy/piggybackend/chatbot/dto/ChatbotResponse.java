@@ -3,10 +3,14 @@ package com.piggy.piggybackend.chatbot.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.util.List;
 
 @Getter
+@Setter
+@NoArgsConstructor
 @AllArgsConstructor
 public class ChatbotResponse {
     private String answer;
@@ -16,7 +20,6 @@ public class ChatbotResponse {
 
     private List<SuggestedQuestion> suggestedQuestions;
 
-    // 기존 생성자 호환 (travel 응답 등)
     public ChatbotResponse(String answer, List<SuggestedQuestion> suggestedQuestions) {
         this.answer = answer;
         this.navigationLinks = null;
@@ -24,16 +27,19 @@ public class ChatbotResponse {
     }
 
     @Getter
+    @Setter
+    @NoArgsConstructor
     @AllArgsConstructor
     public static class SuggestedQuestion {
         private String question;
-        private String preview;
     }
 
     @Getter
+    @Setter
+    @NoArgsConstructor
     @AllArgsConstructor
     public static class NavigationLink {
-        private String label;  // 버튼에 표시될 텍스트
-        private String route;  // 프론트 라우트 경로
+        private String label;
+        private String route;
     }
 }
