@@ -95,6 +95,10 @@ public class ExchangeRateService {
             }
 
             Map<String, Object> rates = (Map<String, Object>) responseMap.get("rates");
+            if (rates.get("KRW") == null) {
+                log.error("외부 환율 API 응답에 KRW 데이터가 없습니다.");
+                return;
+            }
             Double krwInBase = Double.parseDouble(String.valueOf(rates.get("KRW")));
 
             currencyMap.keySet().forEach(code -> {
