@@ -1,10 +1,12 @@
 package com.piggy.piggybackend.global.exception;
 
 import com.piggy.piggybackend.global.response.ErrorResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -40,16 +42,16 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleException(Exception e) {   // 개발 디버깅용 나중에 다시 500 으로
+    public ResponseEntity<ErrorResponse> handleException(Exception e) {
 
-        e.printStackTrace();   // 👈 이 줄 추가
+        log.error("Unhandled exception", e);
 
         return ResponseEntity
                 .internalServerError()
                 .body(ErrorResponse.builder()
                         .statusCode(500)
                         .errorCode("InternalServerError")
-                        .message(e.getMessage())   // 👈 실제 메시지 보기
+                        .message("서버 오류가 발생했습니다.")
                         .build());
     }
 }
