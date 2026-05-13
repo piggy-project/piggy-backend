@@ -60,25 +60,31 @@ public class ExchangeFavoriteService {
     @Transactional(readOnly = true)
     public List<ExchangeFavoriteResponseDto> getFavorites(String email) {
         User user = getUser(email);
+        List<ExchangeFavorite> favorites = favoriteRepository.findAllByUser(user);
 
-        return favoriteRepository.findAllByUser(user).stream()
+        List<String> codes = favorites.stream()
+                .map(ExchangeFavorite::getCurrencyCode)
+                .toList();
+
+        Map<String, ExchangeDetailResponseDto> detailMap = exchangeRateService.getExchangeDetailsBatch(codes);
+
+        return favorites.stream()
                 .map(favorite -> {
                     String code = favorite.getCurrencyCode();
-                    try {
-                        ExchangeDetailResponseDto detail = exchangeRateService.getExchangeDetail(code);
-                        return ExchangeFavoriteResponseDto.builder()
-                                .currencyCode(code)
-                                .currencyName(CURRENCY_NAME_MAP.getOrDefault(code, code))
-                                .currentRate(detail.getCurrentRate())
-                                .change(detail.getChange())
-                                .percentChange(detail.getPercentChange())
-                                .high(detail.getHigh())
-                                .low(detail.getLow())
-                                .build();
-                    } catch (Exception e) {
-                        log.warn("[즐겨찾기] {} 환율 조회 실패: {}", code, e.getMessage());
+                    ExchangeDetailResponseDto detail = detailMap.get(code);
+                    if (detail == null) {
+                        log.warn("[즐겨찾기] {} 환율 조회 실패", code);
                         return null;
                     }
+                    return ExchangeFavoriteResponseDto.builder()
+                            .currencyCode(code)
+                            .currencyName(CURRENCY_NAME_MAP.getOrDefault(code, code))
+                            .currentRate(detail.getCurrentRate())
+                            .change(detail.getChange())
+                            .percentChange(detail.getPercentChange())
+                            .high(detail.getHigh())
+                            .low(detail.getLow())
+                            .build();
                 })
                 .filter(dto -> dto != null)
                 .toList();

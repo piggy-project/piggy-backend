@@ -412,6 +412,47 @@ public class ExchangeRateService {
         return new ExchangeTimingResponseDto(code, Integer.parseInt(recalculated));
     }
 
+    public Map<String, ExchangeDetailResponseDto> getExchangeDetailsBatch(List<String> codes) {
+        Map<Object, Object> liveRates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
+        Map<Object, Object> yesterdayRates = redisTemplate.opsForHash().entries(REDIS_YESTERDAY_RATES);
+        Map<Object, Object> highRates = redisTemplate.opsForHash().entries(REDIS_HIGH_RATES);
+        Map<Object, Object> lowRates = redisTemplate.opsForHash().entries(REDIS_LOW_RATES);
+
+        List<String> timingKeys = codes.stream()
+                .map(code -> REDIS_TIMING_PREFIX + code)
+                .collect(Collectors.toList());
+        List<String> timingValues = redisTemplate.opsForValue().multiGet(timingKeys);
+
+        Map<String, ExchangeDetailResponseDto> result = new HashMap<>();
+        for (int i = 0; i < codes.size(); i++) {
+            String code = codes.get(i);
+            Object rateObj = liveRates.get(code);
+            if (rateObj == null) continue;
+
+            double currentRate = Double.parseDouble(rateObj.toString());
+            Object yesterdayObj = yesterdayRates.get(code);
+            double yesterdayRate = yesterdayObj != null ? Double.parseDouble(yesterdayObj.toString()) : currentRate;
+
+            double change = currentRate - yesterdayRate;
+            double percentChange = yesterdayRate > 0 ? (change / yesterdayRate) * 100 : 0.0;
+
+            Object highObj = highRates.get(code);
+            Object lowObj = lowRates.get(code);
+            String timingVal = timingValues != null ? timingValues.get(i) : null;
+
+            result.put(code, ExchangeDetailResponseDto.builder()
+                    .code(code)
+                    .currentRate(currentRate)
+                    .change(Math.round(change * 100) / 100.0)
+                    .percentChange(Math.round(percentChange * 100) / 100.0)
+                    .high(highObj != null ? Double.parseDouble(highObj.toString()) : currentRate)
+                    .low(lowObj != null ? Double.parseDouble(lowObj.toString()) : currentRate)
+                    .timing(timingVal != null ? Integer.parseInt(timingVal) : null)
+                    .build());
+        }
+        return result;
+    }
+
     // 전일 마감가 DB 조회 로직
     public List<ExchangeHistoryResponseDto> getExchangeHistory(String code) {
         String dbCode = "JPY".equals(code) ? "JPY(100)" : code;
