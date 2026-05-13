@@ -209,6 +209,12 @@ public class ChatbotService {
     }
 
     private ChatbotResponse fetchFromGemini(String userQuestion, String extraContext) throws Exception {
+        String prompt = buildPrompt(userQuestion, extraContext);
+        String rawBody = callGeminiApi(prompt);
+        return parseGeminiResponse(rawBody);
+    }
+
+    private String buildPrompt(String userQuestion, String extraContext) {
         String systemPrompt = """
                 당신은 PIGGY 앱의 친절한 도우미입니다. 아래 두 가지 역할만 수행합니다.
 
@@ -240,17 +246,18 @@ public class ChatbotService {
                   ]
                 }
                 """;
+        return systemPrompt + extraContext + "\n질문: " + userQuestion;
+    }
 
-        String fullPrompt = systemPrompt + extraContext + "\n질문: " + userQuestion;
-
-        Map<String, Object> requestBodyMap = new HashMap<>();
-        requestBodyMap.put("contents", List.of(
-                Map.of("parts", List.of(Map.of("text", fullPrompt)))
-        ));
-
+    private String callGeminiApi(String prompt) throws Exception {
         if (geminiApiKey == null || geminiApiKey.isBlank()) {
             throw new RuntimeException("Gemini API Key가 설정되지 않았습니다.");
         }
+
+        Map<String, Object> requestBodyMap = new HashMap<>();
+        requestBodyMap.put("contents", List.of(
+                Map.of("parts", List.of(Map.of("text", prompt)))
+        ));
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(GEMINI_API_URL + "?key=" + geminiApiKey))
@@ -265,12 +272,15 @@ public class ChatbotService {
             throw new RuntimeException("Gemini API Error: " + response.statusCode());
         }
 
-        JsonNode root = objectMapper.readTree(response.body());
+        return response.body();
+    }
+
+    private ChatbotResponse parseGeminiResponse(String rawBody) throws Exception {
+        JsonNode root = objectMapper.readTree(rawBody);
         String rawText = root.path("candidates").get(0)
                 .path("content").path("parts").get(0)
                 .path("text").asText();
 
-        // ```json ... ``` 마크다운 제거
         String cleanJson = rawText
                 .replaceAll("(?s)```json\\s*", "")
                 .replaceAll("```", "")
