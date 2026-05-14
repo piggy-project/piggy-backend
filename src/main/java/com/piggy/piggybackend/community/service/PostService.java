@@ -19,8 +19,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -197,17 +198,24 @@ public class PostService {
 
         String userSetKey = LIKE_USERS_KEY + postId;
         String countKey = LIKE_COUNT_KEY + postId;
-
-        Long result = redisTemplate.opsForSet().add(userSetKey, user.getId().toString());
+        getLikeCount(postId, post.getLikeCount());
 
         boolean isLiked;
-        if (result != null && result > 0) {
-            redisTemplate.opsForValue().increment(countKey);
-            isLiked = true;
-        } else {
+        if (isUserLiked(postId, user.getId())) {
             redisTemplate.opsForSet().remove(userSetKey, user.getId().toString());
             redisTemplate.opsForValue().decrement(countKey);
+            postLikeRepository.findByPostAndUser(post, user)
+                    .ifPresent(postLikeRepository::delete);
             isLiked = false;
+        } else {
+            redisTemplate.opsForSet().add(userSetKey, user.getId().toString());
+            redisTemplate.opsForValue().increment(countKey);
+            postLikeRepository.findByPostAndUser(post, user)
+                    .orElseGet(() -> postLikeRepository.save(PostLike.builder()
+                            .post(post)
+                            .user(user)
+                            .build()));
+            isLiked = true;
         }
         updateHotScore(post);
 
@@ -249,6 +257,51 @@ public class PostService {
     }
 
     // 매일 새벽 4시 랭킹을 초기화
+    @Transactional(readOnly = true)
+    public List<PostResponseDto> getMyPosts(User user) {
+        if (user == null) throw new CustomException(ErrorCode.LOGIN_REQUIRED);
+
+        return postRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
+                .stream()
+                .map(post -> {
+                    PostResponseDto dto = convertToDto(post);
+                    dto.setLiked(isUserLiked(post.getId(), user.getId()));
+                    dto.setAuthor(true);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<PostResponseDto> getMyLikedPosts(User user) {
+        if (user == null) throw new CustomException(ErrorCode.LOGIN_REQUIRED);
+
+        Set<Long> likedPostIds = new LinkedHashSet<>();
+
+        postLikeRepository.findAllByUserId(user.getId()).stream()
+                .map(postLike -> postLike.getPost().getId())
+                .forEach(likedPostIds::add);
+
+        Set<String> likeKeys = redisTemplate.keys(LIKE_USERS_KEY + "*");
+        if (likeKeys != null) {
+            for (String key : likeKeys) {
+                if (Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(key, user.getId().toString()))) {
+                    likedPostIds.add(Long.parseLong(key.replace(LIKE_USERS_KEY, "")));
+                }
+            }
+        }
+
+        return postRepository.findAllById(likedPostIds).stream()
+                .sorted((left, right) -> right.getCreatedAt().compareTo(left.getCreatedAt()))
+                .map(post -> {
+                    PostResponseDto dto = convertToDto(post);
+                    dto.setLiked(true);
+                    dto.setAuthor(post.getUser().getId().equals(user.getId()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
     @Scheduled(cron = "0 0 4 * * *")
     public void resetHotRanking() {
         redisTemplate.delete(HOT_RANKING_KEY);
@@ -285,7 +338,8 @@ public class PostService {
 
     public boolean isUserLiked(Long postId, Long userId) {
         // Redis Set에 해당 유저가 있는지 확인
-        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(LIKE_USERS_KEY + postId, userId.toString()));
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(LIKE_USERS_KEY + postId, userId.toString()))
+                || postLikeRepository.existsByPostIdAndUserId(postId, userId);
     }
     private Long getLikeCount(Long postId, Long dbCount) {
         String key = LIKE_COUNT_KEY + postId;

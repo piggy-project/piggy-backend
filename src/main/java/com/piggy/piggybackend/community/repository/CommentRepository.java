@@ -11,4 +11,5 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     // 특정 게시글의 모든 댓글을 작성 순서대로 가져오기
     List<Comment> findAllByPostIdOrderByCreatedAtAsc(Long postId);
     List<Comment> findByPostOrderByCreatedAtAsc(Post post);
+    List<Comment> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 }

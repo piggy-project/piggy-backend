@@ -2,6 +2,7 @@ package com.piggy.piggybackend.community.service;
 
 import com.piggy.piggybackend.community.dto.CommentRequestDto;
 import com.piggy.piggybackend.community.dto.CommentResponseDto;
+import com.piggy.piggybackend.community.dto.MyCommentResponseDto;
 import com.piggy.piggybackend.community.entity.Comment;
 import com.piggy.piggybackend.community.entity.Post;
 import com.piggy.piggybackend.community.repository.CommentRepository;
@@ -55,6 +56,16 @@ public class CommentService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<MyCommentResponseDto> getMyComments(User user) {
+        if (user == null) throw new CustomException(ErrorCode.LOGIN_REQUIRED);
+
+        return commentRepository.findAllByUserIdOrderByCreatedAtDesc(user.getId())
+                .stream()
+                .map(this::convertToMyCommentDto)
+                .collect(Collectors.toList());
+    }
+
     @Transactional
     public void deleteComment(Long commentId, User user) {
         if (user == null) throw new CustomException(ErrorCode.LOGIN_REQUIRED);
@@ -82,6 +93,16 @@ public class CommentService {
                 .authorNickname(comment.getUser().getNickname())
                 .createdAt(comment.getCreatedAt())
                 .isAuthor(user != null && comment.getUser().getId().equals(user.getId()))
+                .build();
+    }
+
+    private MyCommentResponseDto convertToMyCommentDto(Comment comment) {
+        return MyCommentResponseDto.builder()
+                .id(comment.getId())
+                .content(comment.getContent())
+                .createdAt(comment.getCreatedAt())
+                .postId(comment.getPost().getId())
+                .postTitle(comment.getPost().getTitle())
                 .build();
     }
 }
