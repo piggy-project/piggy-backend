@@ -5,6 +5,7 @@ import com.piggy.piggybackend.auth.service.CustomOAuth2RequestResolver;
 import com.piggy.piggybackend.auth.service.OAuth2FailureHandler;
 import com.piggy.piggybackend.auth.service.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
