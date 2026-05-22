@@ -22,7 +22,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
-    private final RedisTemplate<String, String> redisTemplate; // ✨ 추가됨
+    private final RedisTemplate<String, String> redisTemplate;
 
     @Override
     public void onAuthenticationSuccess(
@@ -47,13 +47,17 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String accessToken = jwtUtil.generateAccessToken(email);
         String refreshToken = jwtUtil.generateRefreshToken(email);
 
-        // ✨ Redis에 리프레시 토큰 저장 (TTL 14일)
+        // Redis에 리프레시 토큰 저장 (TTL 14일)
         redisTemplate.opsForValue().set("RT:" + email, refreshToken, 14, TimeUnit.DAYS);
 
-        // ... (이하 기존 redirect 로직과 동일) ...
         String target = request.getParameter("target");
         if (target == null) {
             target = (String) request.getSession().getAttribute("target");
+        }
+
+        String currentRedirectUrl = request.getParameter("currentRedirectUrl");
+        if (currentRedirectUrl == null) {
+            currentRedirectUrl = (String) request.getSession().getAttribute("currentRedirectUrl");
         }
 
         String userAgent = request.getHeader("User-Agent");
@@ -62,8 +66,14 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
         String targetUrl;
         if (isApp) {
-            targetUrl = String.format("exp://localhost:8081/--/oauth/%s?token=%s&refreshToken=%s",
-                    path, accessToken, refreshToken);
+            String baseAppUrl = currentRedirectUrl;
+            if (baseAppUrl.endsWith("/")) {
+                baseAppUrl = baseAppUrl.substring(0, baseAppUrl.length() - 1);
+            }
+
+            // 최종 구조 예시: exp://xxxx.ngrok-free.app/--/oauth/success?token=...
+            targetUrl = String.format("%s/--/oauth/%s?token=%s&refreshToken=%s",
+                    baseAppUrl, path, accessToken, refreshToken);
         } else {
             targetUrl = String.format("http://localhost:5173/oauth/%s?token=%s&refreshToken=%s",
                     path, accessToken, refreshToken);
