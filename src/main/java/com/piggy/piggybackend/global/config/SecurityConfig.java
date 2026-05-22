@@ -1,6 +1,7 @@
 package com.piggy.piggybackend.global.config;
 
 import com.piggy.piggybackend.auth.service.CustomOAuth2UserService;
+import com.piggy.piggybackend.auth.service.CustomOAuth2RequestResolver;
 import com.piggy.piggybackend.auth.service.OAuth2FailureHandler;
 import com.piggy.piggybackend.auth.service.OAuth2SuccessHandler;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2SuccessHandler oAuth2SuccessHandler;
     private final OAuth2FailureHandler oAuth2FailureHandler;
+    private final ClientRegistrationRepository clientRegistrationRepository;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -72,6 +74,10 @@ public class SecurityConfig {
                 )
 
                 .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(authorization -> authorization
+                                // 최초 요청 시 파라미터를 세션에 구워줄 커스텀 리졸버를 세팅합니다.
+                                .authorizationRequestResolver(new CustomOAuth2RequestResolver(clientRegistrationRepository))
+                        )
                         .userInfoEndpoint(user ->
                                 user.userService(customOAuth2UserService)
                         )

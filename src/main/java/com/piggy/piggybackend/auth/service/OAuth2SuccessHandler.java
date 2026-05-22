@@ -67,7 +67,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String targetUrl;
         if (isApp) {
             String baseAppUrl = currentRedirectUrl;
-            if (baseAppUrl.endsWith("/")) {
+            if (baseAppUrl != null && baseAppUrl.endsWith("/")) {
                 baseAppUrl = baseAppUrl.substring(0, baseAppUrl.length() - 1);
             }
 
