@@ -25,21 +25,18 @@ public class ShoppingFavoriteController {
     public ResponseEntity<List<ShoppingFavoriteResponseDto>> getFavorites(@LoginUser User user) {
         return ResponseEntity.ok(shoppingFavoriteService.getFavorites(user));
     }
-
     @PostMapping
     public ResponseEntity<ShoppingFavoriteResponseDto> addFavorite(
             @LoginUser User user,
             @Valid @RequestBody ShoppingFavoriteRequestDto request) {
         return ResponseEntity.ok(shoppingFavoriteService.addFavorite(user, request));
     }
-
     @PostMapping("/toggle")
     public ResponseEntity<ShoppingFavoriteToggleResponseDto> toggleFavorite(
             @LoginUser User user,
             @Valid @RequestBody ShoppingFavoriteRequestDto request) {
         return ResponseEntity.ok(shoppingFavoriteService.toggleFavorite(user, request));
     }
-
     @GetMapping("/check")
     public ResponseEntity<Map<String, Boolean>> checkFavorite(
             @LoginUser User user,
@@ -49,7 +46,6 @@ public class ShoppingFavoriteController {
                 "favorite", shoppingFavoriteService.isFavorite(user, source, externalProductId)
         ));
     }
-
     @DeleteMapping("/{favoriteId}")
     public ResponseEntity<Void> deleteFavorite(
             @PathVariable Long favoriteId,
@@ -57,7 +53,6 @@ public class ShoppingFavoriteController {
         shoppingFavoriteService.deleteFavorite(favoriteId, user);
         return ResponseEntity.noContent().build();
     }
-
     @DeleteMapping
     public ResponseEntity<Void> deleteFavoriteByProduct(
             @LoginUser User user,
