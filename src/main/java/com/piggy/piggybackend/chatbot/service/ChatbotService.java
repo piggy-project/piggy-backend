@@ -36,7 +36,7 @@ public class ChatbotService {
     private static final String CHAT_CACHE_PREFIX = "chat:cache:";
 
     private static final List<String> TRAVEL_KEYWORDS =
-            List.of("여행", "추천", "가볼만한", "국가", "나라", "도시", "여행지");
+            List.of("여행", "추천", "가볼만한", "국가", "나라", "도시", "여행지", "환율");
 
     private static final List<String> UI_KEYWORDS =
             List.of("게시판", "커뮤니티", "사용법", "어떻게 사용", "메뉴", "기능",
@@ -196,7 +196,7 @@ public class ChatbotService {
             List<String> currencies = List.of("JPY", "THB", "VND", "PHP", "MYR", "USD", "EUR");
             StringBuilder sb = new StringBuilder("\n\n[현재 환율 정보 (KRW 기준)]\n");
             for (String currency : currencies) {
-                String rate = redisTemplate.opsForValue().get("exchange:" + currency);
+                Object rate = redisTemplate.opsForHash().get("exchange:live", currency);
                 if (rate != null) {
                     sb.append(String.format("- %s: %s원\n", currency, rate));
                 }
@@ -288,4 +288,4 @@ public class ChatbotService {
 
         return objectMapper.readValue(cleanJson, ChatbotResponse.class);
     }
-}
+}   
