@@ -35,10 +35,11 @@ public class ShoppingFavoriteService {
     public ShoppingFavoriteResponseDto addFavorite(User user, ShoppingFavoriteRequestDto request) {
         validateLogin(user);
 
+        insertFavoriteIgnore(user, request);
         return shoppingFavoriteRepository.findByUserAndSourceAndExternalProductId(
                         user, request.getSource(), request.getExternalProductId())
                 .map(this::toResponse)
-                .orElseGet(() -> toResponse(shoppingFavoriteRepository.save(toEntity(user, request))));
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REQUEST));
     }
 
     @Transactional
@@ -55,8 +56,11 @@ public class ShoppingFavoriteService {
                             .build();
                 })
                 .orElseGet(() -> {
-                    ShoppingFavoriteResponseDto saved = toResponse(
-                            shoppingFavoriteRepository.save(toEntity(user, request)));
+                    insertFavoriteIgnore(user, request);
+                    ShoppingFavoriteResponseDto saved = shoppingFavoriteRepository.findByUserAndSourceAndExternalProductId(
+                                    user, request.getSource(), request.getExternalProductId())
+                            .map(this::toResponse)
+                            .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REQUEST));
                     return ShoppingFavoriteToggleResponseDto.builder()
                             .favorite(true)
                             .item(saved)
@@ -101,19 +105,19 @@ public class ShoppingFavoriteService {
         }
     }
 
-    private ShoppingFavorite toEntity(User user, ShoppingFavoriteRequestDto request) {
-        return ShoppingFavorite.builder()
-                .user(user)
-                .externalProductId(request.getExternalProductId())
-                .source(request.getSource())
-                .name(request.getName())
-                .price(request.getPrice())
-                .imageUrl(request.getImageUrl())
-                .productUrl(request.getProductUrl())
-                .shopName(request.getShopName())
-                .currencyCode(request.getCurrencyCode())
-                .exchangeRate(request.getExchangeRate())
-                .build();
+    private void insertFavoriteIgnore(User user, ShoppingFavoriteRequestDto request) {
+        shoppingFavoriteRepository.insertIgnore(
+                user.getId(),
+                request.getExternalProductId(),
+                request.getSource(),
+                request.getName(),
+                request.getPrice(),
+                request.getImageUrl(),
+                request.getProductUrl(),
+                request.getShopName(),
+                request.getCurrencyCode(),
+                request.getExchangeRate()
+        );
     }
 
     private ShoppingFavoriteResponseDto toResponse(ShoppingFavorite favorite) {
