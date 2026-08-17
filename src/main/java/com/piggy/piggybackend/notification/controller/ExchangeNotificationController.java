@@ -5,8 +5,10 @@ import com.piggy.piggybackend.notification.dto.NotificationListResponse;
 import com.piggy.piggybackend.notification.dto.NotificationSettingRequest;
 import com.piggy.piggybackend.notification.dto.TargetPriceSettingRequest;
 import com.piggy.piggybackend.notification.dto.TargetPriceSettingResponse;
+import com.piggy.piggybackend.notification.dto.UserNotificationResponse;
 import com.piggy.piggybackend.notification.service.ExchangeNotificationService;
 import com.piggy.piggybackend.notification.service.SpecialNotificationService;
+import com.piggy.piggybackend.notification.service.UserNotificationService;
 import com.piggy.piggybackend.user.entity.User;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,6 +28,7 @@ public class ExchangeNotificationController {
 
     private final ExchangeNotificationService notificationService;
     private final SpecialNotificationService specialNotificationService;
+    private final UserNotificationService userNotificationService;
 
     @Operation(summary = "[테스트용] 모든 알림 로직 강제 실행", description = "스케줄러를 기다리지 않고 즉시 모든 알림 체크 로직을 수행합니다.")
     @PostMapping("/test/run-all")
@@ -69,6 +72,30 @@ public class ExchangeNotificationController {
 
         notificationService.updateUserFcmToken(user, tokenRequest.get("fcmToken"));
         return ResponseEntity.ok("FCM 토큰이 업데이트되었습니다.");
+    }
+
+    @GetMapping
+    public ResponseEntity<List<UserNotificationResponse>> getMyNotifications(
+            @Parameter(hidden = true) @LoginUser User user) {
+
+        return ResponseEntity.ok(userNotificationService.getMyNotifications(user));
+    }
+
+    @PatchMapping("/{notificationId}/read")
+    public ResponseEntity<UserNotificationResponse> markAsRead(
+            @Parameter(hidden = true) @LoginUser User user,
+            @PathVariable Long notificationId) {
+
+        return ResponseEntity.ok(userNotificationService.markAsRead(user, notificationId));
+    }
+
+    @DeleteMapping("/{notificationId}")
+    public ResponseEntity<Void> deleteNotification(
+            @Parameter(hidden = true) @LoginUser User user,
+            @PathVariable Long notificationId) {
+
+        userNotificationService.deleteNotification(user, notificationId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/target-price")

@@ -11,6 +11,7 @@ import com.piggy.piggybackend.notification.dto.TargetPriceSettingRequest;
 import com.piggy.piggybackend.notification.dto.TargetPriceSettingResponse;
 import com.piggy.piggybackend.notification.entity.ExchangeNotificationSetting;
 import com.piggy.piggybackend.notification.entity.ExchangeTargetPriceSetting;
+import com.piggy.piggybackend.notification.entity.NotificationType;
 import com.piggy.piggybackend.notification.entity.ReferencePeriod;
 import com.piggy.piggybackend.notification.repository.ExchangeNotificationRepository;
 import com.piggy.piggybackend.notification.repository.ExchangeTargetPriceRepository;
@@ -43,6 +44,7 @@ public class ExchangeNotificationService {
     private final FcmService fcmService;
     private final FcmTokenService fcmTokenService;
     private final ExchangeTargetPriceRepository targetPriceRepository;
+    private final UserNotificationService userNotificationService;
 
     private static final String REDIS_LIVE_RATES = "exchange:live";
     private static final int NOTIFICATION_COOLDOWN_HOURS = 6;
@@ -164,6 +166,7 @@ public class ExchangeNotificationService {
         String body = String.format("%s 대비 %.1f%% 변동! 현재가: %.2f원",
                 setting.getPeriod().getLabel(), fluctuation, currentRate);
 
+        userNotificationService.save(setting.getUser(), NotificationType.EXCHANGE_PERCENT, title, body, setting.getCurrencyCode());
         fcmService.sendPushToUserDevices(setting.getUser(), title, body);
 
         log.info("[FCM 발송 완료] User: {}, Currency: {}",
@@ -294,6 +297,7 @@ public class ExchangeNotificationService {
                 setting.getDirection().getLabel(),
                 currentRate);
 
+        userNotificationService.save(setting.getUser(), NotificationType.TARGET_PRICE, title, body, setting.getCurrencyCode());
         fcmService.sendPushToUserDevices(setting.getUser(), title, body);
 
         log.info("[목표가 FCM 발송] User: {}, Currency: {}, 현재가: {}",

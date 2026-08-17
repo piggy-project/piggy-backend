@@ -4,6 +4,7 @@ import com.piggy.piggybackend.exchange.entity.ExchangeFavorite;
 import com.piggy.piggybackend.exchange.entity.ExchangeRate;
 import com.piggy.piggybackend.exchange.repository.ExchangeFavoriteRepository;
 import com.piggy.piggybackend.exchange.repository.ExchangeRateRepository;
+import com.piggy.piggybackend.notification.entity.NotificationType;
 import com.piggy.piggybackend.user.service.FcmService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class SpecialNotificationService {
     private final ExchangeFavoriteRepository favoriteRepository;
     private final StringRedisTemplate redisTemplate;
     private final FcmService fcmService;
+    private final UserNotificationService userNotificationService;
 
     private static final String REDIS_LIVE_RATES = "exchange:live";
     private static final String REDIS_LIVE_RATES_HOUR_PREFIX = "exchange:live:h:";
@@ -64,6 +66,7 @@ public class SpecialNotificationService {
                     String title = "📉 " + code + " 최저가 도달!";
                     String body = String.format("지금이 기회예요! %s가 최근 3개월 중 가장 낮은 %.2f원에 진입했습니다.", code, currentRate);
 
+                    userNotificationService.save(fav.getUser(), NotificationType.LOWEST_PRICE, title, body, code);
                     fcmService.sendPushToUserDevices(fav.getUser(), title, body);
                     log.info("[최저가 알림 발송] User: {}, Currency: {}, Rate: {}", fav.getUser().getEmail(), code, currentRate);
 
@@ -114,6 +117,7 @@ public class SpecialNotificationService {
                     String body = String.format("지난 6시간 동안 %s 환율이 %.1f%% %s했습니다. (현재가: %.2f원)",
                             code, Math.abs(fluctuation), direction, current);
 
+                    userNotificationService.save(fav.getUser(), NotificationType.VOLATILITY, title, body, code);
                     fcmService.sendPushToUserDevices(fav.getUser(), title, body);
                     log.info("[변동성 알림 발송] User: {}, Currency: {}, Fluctuation: {}%", fav.getUser().getEmail(), code, fluctuation);
 

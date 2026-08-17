@@ -3,6 +3,7 @@ package com.piggy.piggybackend.user.entity;
 import com.piggy.piggybackend.community.entity.Comment;
 import com.piggy.piggybackend.community.entity.Post;
 import com.piggy.piggybackend.community.entity.PostLike;
+import com.piggy.piggybackend.notification.entity.UserNotification;
 import com.piggy.piggybackend.shopping.util.entity.ShoppingFavorite;
 import jakarta.persistence.*;
 import lombok.*;
@@ -71,6 +72,10 @@ public class User {
     @Builder.Default
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
     private List<ShoppingFavorite> shoppingFavorites = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private List<UserNotification> notifications = new ArrayList<>();
 
     @Column(length = 512)
     private String profileImageUrl;
