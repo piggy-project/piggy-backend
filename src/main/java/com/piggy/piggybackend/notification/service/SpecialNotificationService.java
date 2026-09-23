@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -41,7 +42,10 @@ public class SpecialNotificationService {
         List<ExchangeFavorite> targets = favoriteRepository.findAllByIsLowestAlertOnTrue();
         if (targets.isEmpty()) return;
 
-        Map<Object, Object> liveRates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
+        Map<Object, Object> liveRates = new HashMap<>(redisTemplate.opsForHash().entries(REDIS_LIVE_RATES));
+        if (liveRates.isEmpty()) {
+            liveRates.put("__DB_FALLBACK__", "0");
+        }
         String threeMonthsAgo = LocalDate.now().minusMonths(3).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String todayStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
@@ -53,6 +57,7 @@ public class SpecialNotificationService {
             String cooldownKey = "alert:lowest:" + code + ":" + fav.getUser().getId() + ":" + todayStr;
             if (Boolean.TRUE.equals(redisTemplate.hasKey(cooldownKey))) continue;
 
+            putLatestDbRateIfAbsent(code, liveRates);
             if (liveRates.containsKey(code)) {
                 double currentRate = Double.parseDouble(liveRates.get(code).toString());
 
@@ -80,12 +85,28 @@ public class SpecialNotificationService {
     /**
      * 2. 급등/급락 변동성 알림 (매시간 체크, 6시간 전 대비 1.5% 이상 변동 시)
      */
+    private void putLatestDbRateIfAbsent(String code, Map<Object, Object> liveRates) {
+        if (liveRates.containsKey(code)) {
+            return;
+        }
+
+        String dbCode = "JPY".equals(code) ? "JPY(100)" : code;
+        String tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+        rateRepository.findTopByCurUnitAndSearchDateBeforeOrderBySearchDateDesc(dbCode, tomorrow)
+                .map(ExchangeRate::getDealBasR)
+                .ifPresent(rate -> {
+                    liveRates.put(code, rate.toString());
+                    log.info("[특수 알림 환율 DB fallback] code: {}, rate: {}", code, rate);
+                });
+    }
+
     @Transactional
     public void checkAndSendVolatilityAlert() {
         List<ExchangeFavorite> targets = favoriteRepository.findAllByIsVolatilityAlertOnTrue();
         if (targets.isEmpty()) return;
 
-        Map<Object, Object> liveRates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
+        Map<Object, Object> liveRates = new HashMap<>(redisTemplate.opsForHash().entries(REDIS_LIVE_RATES));
         
         // 6시간 전 시간 계산
         int targetHour = (LocalDateTime.now().getHour() - 6 + 24) % 24;

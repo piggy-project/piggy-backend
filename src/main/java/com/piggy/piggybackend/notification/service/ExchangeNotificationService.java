@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -107,7 +108,10 @@ public class ExchangeNotificationService {
     public void checkAndSendAlerts() {
         List<ExchangeNotificationSetting> allSettings = notificationRepository.findAllByIsActiveTrue();
 
-        Map<Object, Object> liveRates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
+        Map<Object, Object> liveRates = new HashMap<>(redisTemplate.opsForHash().entries(REDIS_LIVE_RATES));
+        if (liveRates.isEmpty()) {
+            liveRates.put("__DB_FALLBACK__", "0");
+        }
         if (liveRates.isEmpty()) {
             log.warn("[알림 체크 중단] Redis에 실시간 환율 데이터가 없습니다.");
             return;
@@ -125,6 +129,7 @@ public class ExchangeNotificationService {
 
     private void processIndividualNotification(ExchangeNotificationSetting setting, Map<Object, Object> liveRates) {
         String code = setting.getCurrencyCode();
+        putLatestDbRateIfAbsent(code, liveRates);
         if (!liveRates.containsKey(code)) return;
 
         double currentRate;
@@ -159,6 +164,22 @@ public class ExchangeNotificationService {
         return exchangeRateRepository.findTopByCurUnitAndSearchDateBeforeOrderBySearchDateDesc(dbCode, targetDate)
                 .map(ExchangeRate::getDealBasR)
                 .orElse(0.0);
+    }
+
+    private void putLatestDbRateIfAbsent(String code, Map<Object, Object> liveRates) {
+        if (liveRates.containsKey(code)) {
+            return;
+        }
+
+        String dbCode = "JPY".equals(code) ? "JPY(100)" : code;
+        String tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+        exchangeRateRepository.findTopByCurUnitAndSearchDateBeforeOrderBySearchDateDesc(dbCode, tomorrow)
+                .map(ExchangeRate::getDealBasR)
+                .ifPresent(rate -> {
+                    liveRates.put(code, rate.toString());
+                    log.info("[알림 환율 DB fallback] code: {}, rate: {}", code, rate);
+                });
     }
 
     private void executePush(ExchangeNotificationSetting setting, double currentRate, double fluctuation) {
@@ -244,7 +265,10 @@ public class ExchangeNotificationService {
     public void checkAndSendTargetPriceAlerts() {
         List<ExchangeTargetPriceSetting> allSettings = targetPriceRepository.findAllByIsActiveTrue();
 
-        Map<Object, Object> liveRates = redisTemplate.opsForHash().entries(REDIS_LIVE_RATES);
+        Map<Object, Object> liveRates = new HashMap<>(redisTemplate.opsForHash().entries(REDIS_LIVE_RATES));
+        if (liveRates.isEmpty()) {
+            liveRates.put("__DB_FALLBACK__", "0");
+        }
         if (liveRates.isEmpty()) {
             log.warn("[목표가 알림 체크 중단] Redis에 실시간 환율 데이터가 없습니다.");
             return;
@@ -262,6 +286,7 @@ public class ExchangeNotificationService {
 
     private void processTargetPriceNotification(ExchangeTargetPriceSetting setting, Map<Object, Object> liveRates) {
         String code = setting.getCurrencyCode();
+        putLatestDbRateIfAbsent(code, liveRates);
         if (!liveRates.containsKey(code)) return;
 
         double currentRate;

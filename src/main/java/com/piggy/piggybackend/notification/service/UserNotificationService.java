@@ -9,6 +9,7 @@ import com.piggy.piggybackend.notification.repository.UserNotificationRepository
 import com.piggy.piggybackend.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -19,7 +20,7 @@ public class UserNotificationService {
 
     private final UserNotificationRepository userNotificationRepository;
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public UserNotification save(User user, NotificationType type, String title, String body, String currencyCode) {
         if (user == null) {
             throw new CustomException(ErrorCode.LOGIN_REQUIRED);
