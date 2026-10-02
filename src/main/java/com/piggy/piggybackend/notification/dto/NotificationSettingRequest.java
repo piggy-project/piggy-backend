@@ -1,5 +1,7 @@
 package com.piggy.piggybackend.notification.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.piggy.piggybackend.notification.entity.ReferencePeriod;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -21,5 +23,8 @@ public class NotificationSettingRequest {
     @NotNull(message = "기준 기간은 필수입니다.")
     private ReferencePeriod period;
 
+    // Lombok getter(isActive())만 있으면 Jackson이 "active" 읽기 전용 속성으로 인식해 값이 항상 false가 됨
+    @JsonProperty("isActive")
+    @JsonAlias("active")
     private boolean isActive;
 }

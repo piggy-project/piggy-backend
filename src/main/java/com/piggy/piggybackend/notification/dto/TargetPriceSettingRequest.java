@@ -1,5 +1,7 @@
 package com.piggy.piggybackend.notification.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.piggy.piggybackend.notification.entity.PriceDirection;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -21,5 +23,8 @@ public class TargetPriceSettingRequest {
     @NotNull(message = "알림 방향(ABOVE/BELOW)은 필수입니다.")
     private PriceDirection direction;
 
+    // Lombok getter(isActive())만 있으면 Jackson이 "active" 읽기 전용 속성으로 인식해 값이 항상 false가 됨
+    @JsonProperty("isActive")
+    @JsonAlias("active")
     private boolean isActive;
 }
