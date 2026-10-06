@@ -108,7 +108,7 @@ naver:
   api:
     client-id: ${NAVER_CLIENT_ID}
     client-secret: ${NAVER_CLIENT_SECRET}
-    url: https://openapi.naver.com/v1/search/shop.json
+    url: https://naverapihub.apigw.ntruss.com/shopping/v1/search/shop.json
 
 rakuten:
   api:

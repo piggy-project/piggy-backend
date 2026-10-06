@@ -32,8 +32,8 @@ public class NaverShopService {
     public NaverShopDto searchItems(String query) {
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Naver-Client-Id", clientId);
-        headers.set("X-Naver-Client-Secret", clientSecret);
+        headers.set("X-NCP-APIGW-API-KEY-ID", clientId);
+        headers.set("X-NCP-APIGW-API-KEY", clientSecret);
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
         URI uri = UriComponentsBuilder.fromHttpUrl(apiUrl)
