@@ -6,11 +6,7 @@ import com.piggy.piggybackend.exchange.service.ExchangeRateService;
 import com.piggy.piggybackend.global.exception.CustomException;
 import com.piggy.piggybackend.global.exception.ErrorCode;
 import com.piggy.piggybackend.global.redis.service.SearchRankingService;
-import com.piggy.piggybackend.shopping.util.dto.ComparisonResponse;
-import com.piggy.piggybackend.shopping.util.dto.ElevenShopDto;
-import com.piggy.piggybackend.shopping.util.dto.RakutenItemDto;
-import com.piggy.piggybackend.shopping.util.dto.SerpItemDto;
-import com.piggy.piggybackend.shopping.util.dto.UnifiedItemDto;
+import com.piggy.piggybackend.shopping.util.dto.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -27,7 +23,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ComparisonService {
 
-    private final ElevenShopService elevenShopService; // 11번가 서비스로 교체
+    private final NaverShopService naverShopService;
     private final RakutenService rakutenService;
     private final ExchangeRateService exchangeRateService;
     private final SearchRankingService rankingService;
@@ -51,8 +47,7 @@ public class ComparisonService {
         try {
             rankingService.incrementKeywordCount(query, currencyCode);
 
-            // 11번가 API 호출
-            var elevenResult = elevenShopService.searchItems(query);
+            NaverShopDto naverResult = naverShopService.searchItems(query);
 
             RakutenItemDto rakutenResult = null;
             List<SerpItemDto> serpResults = null;
@@ -74,7 +69,7 @@ public class ComparisonService {
             double exchangeRate = exchangeDetail.getCurrentRate();
 
             ComparisonResponse response = ComparisonResponse.builder()
-                    .naverResults(elevenResult)
+                    .naverResults(naverResult)
                     .rakutenResults(rakutenResult)
                     .serpResults(serpResults)
                     .exchangeRate(exchangeRate)

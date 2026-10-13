@@ -1,5 +1,6 @@
 package com.piggy.piggybackend.shopping.util.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -7,17 +8,34 @@ import java.util.List;
 
 @Getter
 @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class NaverShopDto {
-    private List<Item> items;
+    private List<ProductData> data;
 
     @Getter
     @NoArgsConstructor
-    public static class Item {
-        private String title;      // 상품명
-        private String link;       // 상품 링크
-        private String image;      // 상품 이미지 URL
-        private int lprice;        // 최저가
-        private String mallName;   // 판매처
-        private String productId;  // 네이버 상품 ID
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ProductData {
+        private String id;
+        private String productName;
+        private int salePrice;
+        private String mallName;
+        private ProductUrl productUrl;
+        private List<ImageInfo> images;
+
+        @Getter
+        @NoArgsConstructor
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class ProductUrl {
+            private String pcUrl;
+            private String mobileUrl;
+        }
+
+        @Getter
+        @NoArgsConstructor
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class ImageInfo {
+            private String imageUrl;
+        }
     }
 }

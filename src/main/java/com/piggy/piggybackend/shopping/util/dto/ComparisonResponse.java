@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ComparisonResponse {
-    private ElevenShopDto naverResults; // 프론트 호환성을 위해 필드명 유지
+    private NaverShopDto naverResults;
     private RakutenItemDto rakutenResults;
     private List<SerpItemDto> serpResults;
     private double exchangeRate;
