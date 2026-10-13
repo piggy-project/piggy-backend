@@ -33,9 +33,13 @@ public class NaverShopService {
             // 2. 브라우저 위장 필수 헤더
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
             headers.set("Referer", "https://search.shopping.naver.com/");
             headers.set("Accept", "application/json, text/plain, */*");
+            headers.set("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7");
+            headers.set("sec-ch-ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"");
+            headers.set("sec-ch-ua-mobile", "?0");
+            headers.set("sec-ch-ua-platform", "\"Windows\"");
 
             // 3. Payload 파라미터 구성
             Map<String, Object> requestBody = new HashMap<>();
