@@ -7,6 +7,7 @@ import com.piggy.piggybackend.global.exception.CustomException;
 import com.piggy.piggybackend.global.exception.ErrorCode;
 import com.piggy.piggybackend.global.redis.service.SearchRankingService;
 import com.piggy.piggybackend.shopping.util.dto.ComparisonResponse;
+import com.piggy.piggybackend.shopping.util.dto.ElevenShopDto;
 import com.piggy.piggybackend.shopping.util.dto.RakutenItemDto;
 import com.piggy.piggybackend.shopping.util.dto.SerpItemDto;
 import com.piggy.piggybackend.shopping.util.dto.UnifiedItemDto;
@@ -26,7 +27,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ComparisonService {
 
-    private final NaverShopService naverService;
+    private final ElevenShopService elevenShopService; // 11번가 서비스로 교체
     private final RakutenService rakutenService;
     private final ExchangeRateService exchangeRateService;
     private final SearchRankingService rankingService;
@@ -50,35 +51,30 @@ public class ComparisonService {
         try {
             rankingService.incrementKeywordCount(query, currencyCode);
 
-            // 1. 네이버 API 호출
-            var naverResult = naverService.searchItems(query);
+            // 11번가 API 호출
+            var elevenResult = elevenShopService.searchItems(query);
 
-            // 2. 외화 결과 분기 처리
             RakutenItemDto rakutenResult = null;
-            List<SerpItemDto> serpResults = null; // 변수명 복수형으로 통일
+            List<SerpItemDto> serpResults = null;
 
             if ("JPY".equals(currencyCode)) {
                 rakutenResult = rakutenService.searchItems(query);
             }
-            // 미국, 유럽, 영국, 호주를 eBay 그룹으로 묶습니다.
             else if (List.of("USD", "EUR", "GBP", "AUD").contains(currencyCode)) {
                 serpResults = ebayShopService.getEbayProducts(query, currencyCode);
             }
-            // 동남아 3국 + 중국을 SerpApi 그룹으로 처리합니다.
             else if (List.of("THB", "PHP", "VND", "CNY").contains(currencyCode)) {
                 serpResults = serpShopService.getRegionalProducts(query, currencyCode);
             }
 
-            // 3. 환율 데이터 확인
             var exchangeDetail = exchangeRateService.getExchangeDetail(currencyCode);
             if (exchangeDetail == null) {
                 throw new CustomException(ErrorCode.EXCHANGE_DATA_NOT_FOUND);
             }
             double exchangeRate = exchangeDetail.getCurrentRate();
 
-            // 4. 결과 조립
             ComparisonResponse response = ComparisonResponse.builder()
-                    .naverResults(naverResult)
+                    .naverResults(elevenResult)
                     .rakutenResults(rakutenResult)
                     .serpResults(serpResults)
                     .exchangeRate(exchangeRate)
@@ -98,13 +94,11 @@ public class ComparisonService {
     }
 
     // 인기 아이템 리스트 (캐시 읽기)
-    // 1. 통화별 추천 아이템 가져오기
     public List<UnifiedItemDto> getPopularItems(String currencyCode) {
         String cacheKey = CACHE_KEY_PREFIX + currencyCode;
         try {
             List<UnifiedItemDto> cached = getCachedItems(cacheKey);
             if (cached == null || cached.isEmpty()) {
-                // 캐시가 없으면 즉시 한 번 갱신 시도 (혹은 빈 리스트 반환)
                 return List.of();
             }
             return cached;
@@ -114,7 +108,6 @@ public class ComparisonService {
         }
     }
 
-    // 인기 아이템(캐시) 관련 로직(하루에 한번 캐시 갱신, api호출 아껴야함)
     @Scheduled(cron = "0 0 0 * * *")
     public void refreshAllCurrenciesCache() {
         List<String> currencies = List.of("JPY", "CNY", "USD", "VND", "PHP", "THB", "EUR", "AUD", "GBP");
@@ -122,15 +115,13 @@ public class ComparisonService {
             refreshPopularItemsCache(code);
         }
     }
-    // 2. 매시 정각/30분마다 자동 갱신
+
     public void refreshPopularItemsCache(String currencyCode) {
         log.info("{} 인기 아이템 캐시 갱신 시작", currencyCode);
         try {
-            //키워드 줄여서 결과값 3개만 가져오기(serf는 무료 할당량이 적음)
             int limit = (List.of("THB", "PHP", "VND", "CNY").contains(currencyCode)) ? 2 : 6;
             List<String> topKeywords = rankingService.getTopKeywords(currencyCode, limit);
 
-            // 검색어가 하나도 없는 신규 국가의 경우 JPY나 전체 인기 키워드를 Fallback으로 사용 가능
             if (topKeywords.isEmpty()) {
                 topKeywords = rankingService.getTopKeywords("ALL", limit);
             }
@@ -144,7 +135,6 @@ public class ComparisonService {
                     Thread.sleep(500);
 
                     if ("JPY".equals(currencyCode)) {
-                        // 1. 일본 (라쿠텐)
                         var res = rakutenService.searchItems(keyword);
                         if (res == null || res.getItems().isEmpty()) return null;
                         var item = res.getItems().get(0).getItem();
@@ -154,22 +144,20 @@ public class ComparisonService {
                                 .source("RAKUTEN").exchangeRate(rate).build();
                     }
                     else if ("USD".equals(currencyCode) || "EUR".equals(currencyCode)) {
-                        // 2. 미국/유럽 (eBay) - 추가된 로직
                         var resList = ebayShopService.getEbayProducts(keyword, currencyCode);
                         if (resList == null || resList.isEmpty()) return null;
 
-                        var item = resList.get(0); // 검색 결과 중 가장 정확도가 높은 첫 번째 상품
+                        var item = resList.get(0);
                         return UnifiedItemDto.builder()
                                 .id(item.getLink())
                                 .name(item.getTitle())
                                 .price((int) item.getPrice())
                                 .imageUrl(item.getThumbnail())
-                                .source("EBAY") // 출처 구분
+                                .source("EBAY")
                                 .exchangeRate(rate)
                                 .build();
                     }
                     else {
-                        // 3. 동남아 (SerpApi - Shopee/Lazada)
                         var resList = serpShopService.getRegionalProducts(keyword, currencyCode);
                         if (resList == null || resList.isEmpty()) return null;
 

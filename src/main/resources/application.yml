@@ -116,6 +116,11 @@ rakuten:
     access-key: ${RAKUTEN_ACCESS_KEY}
     url: https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601
 
+elevenst:
+  api:
+    key: ${ELEVENST_API_KEY}
+    url: http://openapi.11st.co.kr/openapi/OpenApiService.tmall
+
 jwt:
   secret-key: ${JWT_SECRET_KEY}
   access-expiration: 900000        # 15분
@@ -145,7 +150,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: prometheus,health,info
   endpoint:
     health:
       show-details: always
