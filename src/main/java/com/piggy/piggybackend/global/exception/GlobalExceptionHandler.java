@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @Slf4j
 @RestControllerAdvice
@@ -38,6 +39,18 @@ public class GlobalExceptionHandler {
                         .statusCode(400)
                         .errorCode("ValidationError")
                         .message(message)
+                        .build());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+
+        return ResponseEntity
+                .badRequest()
+                .body(ErrorResponse.builder()
+                        .statusCode(400)
+                        .errorCode("InvalidParameter")
+                        .message("잘못된 요청 값입니다: " + e.getName())
                         .build());
     }
 
