@@ -30,6 +30,7 @@ public class RakutenService {
 
         URI uri = UriComponentsBuilder.fromHttpUrl(apiUrl)
                 .queryParam("applicationId", applicationId.trim())
+                .queryParam("accessKey", accessKey.trim())
                 .queryParam("keyword", keyword)
                 .queryParam("format", "json")
                 .queryParam("hits", 10)
