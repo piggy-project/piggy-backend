@@ -31,9 +31,15 @@
 ```mermaid
 flowchart TB
     App["모바일 앱<br/>(React Native)"]
-    API["Spring Boot<br/>API 서버"]
-    MySQL[("MySQL")]
-    Redis[("Redis")]
+
+    subgraph EC2["AWS EC2 · Docker Compose"]
+        API["Spring Boot<br/>API 서버"]
+        MySQL[("MySQL")]
+        Redis[("Redis")]
+        Mon["Prometheus<br/>Grafana"]
+        K6["k6<br/>부하 테스트"]
+    end
+
     Ext["외부 API<br/>(환율 · AI · 쇼핑)"]
     FCM["Firebase<br/>FCM"]
     S3[("AWS S3")]
@@ -41,6 +47,8 @@ flowchart TB
     App -- "REST + JWT" --> API
     API -- "회원 · 이력" --> MySQL
     API -- "환율 · 토큰 · 캐시" --> Redis
+    Mon -- "메트릭 수집" --> API
+    K6 -- "부하 테스트" --> API
     API -- "데이터 조회" --> Ext
     API -- "이미지" --> S3
     API -- "푸시 발송" --> FCM
