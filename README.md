@@ -90,7 +90,6 @@ flowchart TB
   </thead>
   <tbody>
     <tr><td>실시간 환율</td><td>주요 9개 통화의 현재가 · 전일 대비 · 당일 고저가 · 시간대별 추이 · 기간별 이력 제공. 최근 90일 환율 대비 현재 환율의 백분위로 환전 적기 안내</td><td>외부 환율 API, Redis Hash, <code>@Scheduled</code></td></tr>
-    <tr><td>환전 수수료 시뮬레이터</td><td>은행별(국민 · 신한 · 기업 · 토스 · 직접 입력) 수수료율과 우대율을 적용해 최종 수령 외화와 절약 금액 계산</td><td>정책 Enum, 실시간 환율 연동</td></tr>
     <tr><td>AI 여행지 추천 · 챗봇</td><td>해시태그별 여행지를 매시간 추천하고, 앱 사용법 · 여행 · 환율 질문에 답변하며 후속 질문 추천</td><td>Gemini API, Redis 캐시</td></tr>
     <tr><td>가격 OCR 스캔</td><td>가격표 사진에서 통화 기호와 금액을 인식해 실시간 환율로 원화 환산</td><td>Google Cloud Vision, 정규식 파싱</td></tr>
     <tr><td>해외 쇼핑 가격 비교</td><td>네이버(국내)와 통화별 해외 쇼핑 API(Rakuten · eBay · SerpAPI) 가격을 환율 환산해 비교, 검색어 랭킹 기반 인기 상품 제공</td><td>다중 외부 API, Redis Sorted Set</td></tr>
