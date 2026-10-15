@@ -7,10 +7,8 @@ import com.piggy.piggybackend.notification.dto.TargetPriceSettingRequest;
 import com.piggy.piggybackend.notification.dto.TargetPriceSettingResponse;
 import com.piggy.piggybackend.notification.dto.UserNotificationResponse;
 import com.piggy.piggybackend.notification.service.ExchangeNotificationService;
-import com.piggy.piggybackend.notification.service.SpecialNotificationService;
 import com.piggy.piggybackend.notification.service.UserNotificationService;
 import com.piggy.piggybackend.user.entity.User;
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,18 +25,7 @@ import java.util.Map;
 public class ExchangeNotificationController {
 
     private final ExchangeNotificationService notificationService;
-    private final SpecialNotificationService specialNotificationService;
     private final UserNotificationService userNotificationService;
-
-    @Operation(summary = "[테스트용] 모든 알림 로직 강제 실행", description = "스케줄러를 기다리지 않고 즉시 모든 알림 체크 로직을 수행합니다.")
-    @PostMapping("/test/run-all")
-    public ResponseEntity<String> triggerAllNotifications() {
-        notificationService.checkAndSendAlerts();
-        notificationService.checkAndSendTargetPriceAlerts();
-        specialNotificationService.checkAndSendLowestPriceAlert();
-        specialNotificationService.checkAndSendVolatilityAlert();
-        return ResponseEntity.ok("모든 알림 체크 로직이 강제 실행되었습니다. 로그를 확인하세요.");
-    }
 
     @PostMapping("/settings")
     public ResponseEntity<String> updateNotificationSetting(

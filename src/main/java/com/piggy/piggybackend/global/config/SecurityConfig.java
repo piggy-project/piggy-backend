@@ -68,8 +68,7 @@ public class SecurityConfig {
                                 "/api/exchange/simulate",
                                 "/api/v1/ocr/**",
                                 "/food/**",
-                                "/api/chatbot/**",
-                                "/api/notifications/**"
+                                "/api/chatbot/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
