@@ -1,4 +1,4 @@
-# PIGGY (Save On Money) Backend
+# PIGGY Backend
 
 > 환율 기반 여행 유틸리티 서비스 **PIGGY** 의 백엔드 서버입니다.
 > 실시간 환율 · 환전 타이밍 · 가격 OCR 환산 · 해외 쇼핑 가격 비교 · AI 챗봇 · 커뮤니티를 하나의 앱에서 제공합니다.
@@ -14,7 +14,7 @@
 
 | 항목 | 내용 |
 | --- | --- |
-| 프로젝트명 | PIGGY (백엔드 저장소: Save On Money) |
+| 프로젝트명 | PIGGY |
 | 한 줄 설명 | 해외여행·직구 사용자를 위해 실시간 환율, 환전 타이밍, 가격 OCR 환산, 해외 쇼핑 가격 비교, AI 챗봇, 커뮤니티를 한 앱에서 제공하는 환율 기반 여행 유틸리티 서비스 |
 | 플랫폼 | 모바일 앱(Android · iOS) + REST API 서버 |
 
@@ -29,20 +29,20 @@
 ### 아키텍처 구조도
 
 ```mermaid
-flowchart LR
-    App["모바일 앱<br/>React Native · Expo"]
-    API["Spring Boot API 서버<br/>JWT 인증 · 스케줄러"]
-    MySQL[("MySQL<br/>회원 · 환율 이력 · 게시글")]
-    Redis[("Redis<br/>실시간 환율 · 토큰 · 캐시 · 랭킹")]
-    Ext["외부 API<br/>환율 · Gemini · Vision · 쇼핑"]
-    FCM["Firebase FCM"]
-    S3[("AWS S3<br/>이미지")]
+flowchart TB
+    App["모바일 앱<br/>(React Native)"]
+    API["Spring Boot<br/>API 서버"]
+    MySQL[("MySQL")]
+    Redis[("Redis")]
+    Ext["외부 API<br/>(환율 · AI · 쇼핑)"]
+    FCM["Firebase<br/>FCM"]
+    S3[("AWS S3")]
 
     App -- "REST + JWT" --> API
-    API --> MySQL
-    API --> Redis
-    API --> Ext
-    API --> S3
+    API -- "회원 · 이력" --> MySQL
+    API -- "환율 · 토큰 · 캐시" --> Redis
+    API -- "데이터 조회" --> Ext
+    API -- "이미지" --> S3
     API -- "푸시 발송" --> FCM
     FCM -. "알림" .-> App
 ```
@@ -54,11 +54,11 @@ flowchart LR
 | 구분 | 기술 |
 | --- | --- |
 | Language | Java 21 |
-| Backend | Spring Boot 3.2, Spring Security, Spring Data JPA, OAuth2 Client, JWT(jjwt), Validation, Swagger(springdoc) |
+| Backend | Spring Boot 3.2, Spring Security, JPA, OAuth2 Client, JWT, Swagger |
 | Database / Cache | MySQL 8.0, Redis (Hash · Sorted Set · TTL 캐시) |
 | 외부 연동 | 환율 API, Gemini 2.5 Flash, Google Cloud Vision, 네이버 쇼핑 · Rakuten · eBay · SerpAPI, Firebase FCM, AWS S3, SMTP 메일 |
 | Infra / DevOps | Docker, Docker Compose, GitHub Actions(CI/CD), AWS EC2 |
-| Monitoring | Spring Actuator + Micrometer(Prometheus), Grafana, k6 |
+| Monitoring | Prometheus, Grafana, k6 |
 | Frontend | React Native, Expo Router, TypeScript, React Query, Axios |
 
 ---
@@ -69,7 +69,7 @@ flowchart LR
 
 | 기능 | 설명 | 핵심 기술 |
 | --- | --- | --- |
-| 실시간 환율 · 환전 타이밍 | 주요 9개 통화의 현재가 · 전일 대비 · 당일 고저가 · 시간대별 추이 · 기간별 이력 제공. 최근 90일 환율 대비 현재 환율의 백분위로 환전 적기 안내 | 외부 환율 API, Redis Hash, `@Scheduled` |
+| 실시간 환율 | 주요 9개 통화의 현재가 · 전일 대비 · 당일 고저가 · 시간대별 추이 · 기간별 이력 제공. 최근 90일 환율 대비 현재 환율의 백분위로 환전 적기 안내 | 외부 환율 API, Redis Hash, `@Scheduled` |
 | 환전 수수료 시뮬레이터 | 은행별(국민 · 신한 · 기업 · 토스 · 직접 입력) 수수료율과 우대율을 적용해 최종 수령 외화와 절약 금액 계산 | 정책 Enum, 실시간 환율 연동 |
 | AI 여행지 추천 · 챗봇 | 해시태그별 여행지를 매시간 추천하고, 앱 사용법 · 여행 · 환율 질문에 답변하며 후속 질문 추천 | Gemini API, Redis 캐시 |
 | 가격 OCR 스캔 | 가격표 사진에서 통화 기호와 금액을 인식해 실시간 환율로 원화 환산 | Google Cloud Vision, 정규식 파싱 |
@@ -78,54 +78,9 @@ flowchart LR
 | 커뮤니티 | 게시판(자유 · 환율 · 여행), 댓글, 좋아요, 핫 게시글, 이미지 업로드, 내 활동 조회 | Redis, AWS S3 |
 | 회원 · 인증 | 이메일 가입(인증 메일), 카카오 · 구글 · 네이버 소셜 로그인, JWT 발급 · 재발급, 탈퇴 후 1개월 뒤 영구 삭제 | Spring Security, OAuth2, JWT |
 
-### 담당 역할 (풀스택)
-
-- **인증/인가 API**: 이메일 가입(인증 메일)과 카카오 · 구글 · 네이버 OAuth2 로그인, JWT 액세스/리프레시 토큰 발급 · 재발급
-- **실시간 환율 API**: 매시간 외부 환율 수집 → Redis 캐싱, 현재가 · 전일 대비 · 당일 고저가 · 기간별 이력 조회
-- **환전 타이밍 로직**: 최근 90일 마감 환율 대비 현재 환율의 백분위 산출
-- **환율 알림**: 목표가 · 기간 최저가 · 급등락 조건 검사 후 FCM 푸시 발송, 알림 설정 CRUD
-- **해외 쇼핑 가격 비교 · OCR**: 통화별 쇼핑 API 분기 및 환율 환산, OCR 금액 파싱, 검색어 랭킹 기반 인기 상품
-- **커뮤니티 · 챗봇**: 게시글 · 댓글 · 좋아요 · 핫 게시글, S3 이미지 업로드, Gemini 기반 챗봇 API
-- **프론트엔드**: 앱 화면 구현, Axios 인터셉터 기반 토큰 재발급 처리
-
 ---
 
-## 4. 기술적 의사결정 및 트러블슈팅
-
-### ① JWT 재발급 동시 요청 경합으로 인한 401 연쇄 · 로그인 해제 문제
-
-| 구분 | 내용 |
-| --- | --- |
-| 문제 | 메인 화면 진입 시 대시보드 · 알림 · 즐겨찾기 API가 동시에 호출되면서 401이 연쇄적으로 발생했고, 중복 재발급으로 토큰이 어긋나 로그인이 풀리는 현상이 발생 |
-| 원인 | 요청마다 개별로 재발급을 시도하는 구조여서, 만료된 토큰으로 나간 동시 요청들이 각각 재발급 API를 중복 호출 |
-| 해결 | **백엔드**: Redis에 `RT:{email}` 형태로 Refresh Token을 저장(TTL 14일)하고, 재발급 시마다 새 토큰으로 교체(Rotation)하며 저장값과 불일치하면 거부. 로그아웃 · 탈취 시 키 삭제로 즉시 무효화<br>**프론트엔드**: Axios Interceptor에서 재발급을 1회로 제한하고, 나머지 요청은 대기 큐에 쌓았다가 새 토큰으로 일괄 재요청 |
-| 결과 | Access Token 만료 상황을 재현해 검증한 결과, 재발급은 1회만 실행되고 모든 요청이 정상 처리됨 |
-
-### ② 스케줄러 기반 환율 알림의 중복 발송
-
-| 구분 | 내용 |
-| --- | --- |
-| 문제 | 조건이 유지되는 동안 매시간 스케줄러가 실행될 때마다 동일 알림이 반복 발송될 위험 |
-| 원인 | 이미 발송했는지 기억하는 상태가 없었고, 환율 갱신(0분)과 검사 시점이 겹치면 갱신 전 데이터로 판단할 수 있음 |
-| 해결 | **스케줄 분리**: 환율 갱신(매시 0분) 후 1분(변동률 · 목표가), 5분(최저가 · 급등락)에 검사해 데이터 안정화 뒤 실행<br>**중복 차단**: 변동률 · 목표가 알림은 DB의 마지막 발송 시각 기준 6시간, 최저가(24h) · 급등락(6h) 알림은 유저 · 통화별 Redis TTL 키로 쿨다운<br>**안정성**: 설정별 try-catch로 한 건의 오류가 전체 발송을 막지 않게 하고, 이력 DB 저장 후 FCM 전송 |
-
-### ③ 실시간 환율을 Redis에 캐싱한 이유
-
-| 구분 | 내용 |
-| --- | --- |
-| 배경 | 화면 진입마다 환율 목록 · 상세 · 그래프 · 알림 판단에 환율이 필요해, 요청마다 외부 API나 DB를 조회하면 호출 한도와 응답 속도에 부담 |
-| 결정 | 매시간 1회만 외부 API를 호출해 Redis Hash에 저장하고, 시간대별 스냅샷(25시간 TTL) · 당일 고저가 · 전일 마감가를 별도 키로 분리. 목록 조회는 멀티 조회로 처리하고 캐시가 없으면 DB로 폴백. 매일 02:10에 마감 환율을 DB에 영속화 |
-| 활용 | 환전 타이밍, 쇼핑 환산, OCR 환산, 알림 판단이 모두 같은 Redis 환율을 공유 |
-
-### ④ 외부 API 비용 · 지연 줄이기
-
-- 챗봇(1시간) · 쇼핑 검색(60분) · AI 여행 추천(약 65분) 결과를 Redis TTL로 캐싱
-- AI 호출 실패 시 짧은 에러 키(1분)를 두어 재시도 폭주 방지
-- 통화별로 호출할 쇼핑 API를 분기(JPY → Rakuten, USD · EUR · GBP · AUD → eBay, THB · PHP · VND · CNY → SerpAPI)하고, 검색어 랭킹(Sorted Set) 기반 인기 상품은 매일 자정에 미리 갱신
-
----
-
-## 5. ERD 및 시스템 아키텍처
+## 4. ERD 및 시스템 아키텍처
 
 ### ERD
 
@@ -290,8 +245,8 @@ com.piggy.piggybackend
 
 ```mermaid
 flowchart LR
-    Dev["main 브랜치 push"] --> GHA["GitHub Actions<br/>JDK 21 빌드"]
-    GHA --> Hub["Docker 이미지 빌드 · push"]
+    Dev["main<br/>push"] --> GHA["GitHub<br/>Actions"]
+    GHA --> Hub["Docker Hub<br/>이미지 push"]
     Hub --> EC2["AWS EC2<br/>SSH 접속"]
-    EC2 --> Run["docker compose<br/>pull · up -d"]
+    EC2 --> Run["docker compose<br/>up -d"]
 ```
