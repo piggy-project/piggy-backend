@@ -5,7 +5,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
@@ -17,10 +16,6 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 @Component
 public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler {
-
-    // Expo 개발 서버 주소 (환경변수 APP_EXPO_HOST, 기본값 localhost:8081)
-    @Value("${app.expo-host:localhost:8081}")
-    private String expoHost;
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
@@ -45,16 +40,22 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
         // 앱 여부 판단 (모바일 기기거나 target 파라미터가 'app'인 경우)
         boolean isApp = "app".equals(target) || (target == null && userAgent != null && userAgent.toLowerCase().contains("mobi"));
 
+        // 앱이 로그인 시작 시 보낸 주소(현재 연결된 와이파이 기준)를 세션에서 가져옴
+        String appBaseUrl = (String) request.getSession().getAttribute("currentRedirectUrl");
+        if (appBaseUrl != null && appBaseUrl.endsWith("/")) {
+            appBaseUrl = appBaseUrl.substring(0, appBaseUrl.length() - 1);
+        }
+
         String targetUrl;
-        if (isApp) {
-            // 엑스포 앱용 에러 경로
-            targetUrl = String.format("exp://%s/--/oauth/error?message=%s", expoHost, errorMessage);
+        if (isApp && appBaseUrl != null) {
+            // 앱용 에러 경로 (SuccessHandler와 동일한 형식)
+            targetUrl = String.format("%s/--/oauth/error?message=%s", appBaseUrl, errorMessage);
         } else {
             // 웹용 에러 경로
             targetUrl = String.format("http://localhost:5173/oauth/error?message=%s", errorMessage);
         }
 
-        log.info("Redirecting to (error): {}", targetUrl);
+        log.info("OAuth2 로그인 실패, 에러 화면으로 리다이렉트");
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }

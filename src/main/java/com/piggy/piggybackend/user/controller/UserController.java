@@ -74,8 +74,11 @@ public class UserController {
 
     // 비밀번호 재설정 요청
     @PostMapping("/password/reset-request")
-    public ResponseEntity<?> requestReset(@RequestParam String email, @RequestParam(defaultValue = "web") String source) {
-        userService.createResetToken(email, source);
+    public ResponseEntity<?> requestReset(
+            @RequestParam String email,
+            @RequestParam(defaultValue = "web") String source,
+            @RequestParam(required = false) String redirectUrl) {
+        userService.createResetToken(email, source, redirectUrl);
         return ResponseEntity.ok("이메일 발송 완료");
     }
 

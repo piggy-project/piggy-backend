@@ -1,7 +1,6 @@
 package com.piggy.piggybackend.user.service;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -12,17 +11,13 @@ public class MailService {
 
     private final JavaMailSender mailSender;
 
-    // Expo 개발 서버 주소 (환경변수 APP_EXPO_HOST, 기본값 localhost:8081)
-    @Value("${app.expo-host:localhost:8081}")
-    private String expoHost;
-
-    public void sendResetMail(String to, String token, String source) {
+    public void sendResetMail(String to, String token, String source, String redirectUrl) {
         String resetLink;
 
 
-        if ("app".equalsIgnoreCase(source)) {
-            // 앱 요청일 경우 (Expo Go 딥링크)
-            resetLink = "exp://" + expoHost + "/--/password-reset?token=" + token;
+        if ("app".equalsIgnoreCase(source) && isAllowedAppUrl(redirectUrl)) {
+            // 앱 요청일 경우: 앱이 보낸 딥링크 주소(현재 연결된 와이파이 기준)를 그대로 사용
+            resetLink = redirectUrl + "?token=" + token;
         } else {
             // 웹 요청일 경우 (일반 HTTPS 링크)
             resetLink = "https://piggys.mooo.com/password/reset?token=" + token;
@@ -36,5 +31,10 @@ public class MailService {
                 "본인이 요청하지 않았다면 이 이메일을 무시하셔도 됩니다.");
 
         mailSender.send(message);
+    }
+
+    // 앱 딥링크 스킴만 허용 (개발: exp://, 배포: piggy://)
+    private boolean isAllowedAppUrl(String url) {
+        return url != null && (url.startsWith("exp://") || url.startsWith("piggy://"));
     }
 }

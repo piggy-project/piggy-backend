@@ -42,12 +42,17 @@ public class CustomOAuth2RequestResolver implements OAuth2AuthorizationRequestRe
 
         // 최초 요청(?currentRedirectUrl=...)이 들어왔을 때 파라미터를 세션에 구워버립니다.
         String currentRedirectUrl = request.getParameter("currentRedirectUrl");
-        if (currentRedirectUrl != null) {
+        if (currentRedirectUrl != null && isAllowedAppUrl(currentRedirectUrl)) {
             HttpSession session = request.getSession();
             session.setAttribute("currentRedirectUrl", currentRedirectUrl);
-            System.out.println("[OAuth2 Resolver] 세션에 currentRedirectUrl 저장 완료: " + currentRedirectUrl);
+            System.out.println("[OAuth2 Resolver] 세션에 currentRedirectUrl 저장 완료");
         }
 
         return authRequest;
+    }
+
+    // 앱 딥링크 스킴만 허용 (개발: exp://, 배포: piggy://)
+    private boolean isAllowedAppUrl(String url) {
+        return url.startsWith("exp://") || url.startsWith("piggy://");
     }
 }
