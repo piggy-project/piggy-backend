@@ -1,6 +1,7 @@
 package com.piggy.piggybackend.user.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -11,14 +12,17 @@ public class MailService {
 
     private final JavaMailSender mailSender;
 
+    // Expo 개발 서버 주소 (환경변수 APP_EXPO_HOST, 기본값 localhost:8081)
+    @Value("${app.expo-host:localhost:8081}")
+    private String expoHost;
+
     public void sendResetMail(String to, String token, String source) {
         String resetLink;
 
 
         if ("app".equalsIgnoreCase(source)) {
             // 앱 요청일 경우 (Expo Go 딥링크)
-            String expoIp = "localhost:8081";
-            resetLink = "exp://" + expoIp + "/--/password-reset?token=" + token;
+            resetLink = "exp://" + expoHost + "/--/password-reset?token=" + token;
         } else {
             // 웹 요청일 경우 (일반 HTTPS 링크)
             resetLink = "https://piggys.mooo.com/password/reset?token=" + token;

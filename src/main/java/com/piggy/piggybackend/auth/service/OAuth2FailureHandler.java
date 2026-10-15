@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationFailureHandler;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,10 @@ import java.nio.charset.StandardCharsets;
 @Slf4j
 @Component
 public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler {
+
+    // Expo 개발 서버 주소 (환경변수 APP_EXPO_HOST, 기본값 localhost:8081)
+    @Value("${app.expo-host:localhost:8081}")
+    private String expoHost;
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
@@ -43,7 +48,7 @@ public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler 
         String targetUrl;
         if (isApp) {
             // 엑스포 앱용 에러 경로
-            targetUrl = String.format("exp://localhost:8081/--/oauth/error?message=%s", errorMessage);
+            targetUrl = String.format("exp://%s/--/oauth/error?message=%s", expoHost, errorMessage);
         } else {
             // 웹용 에러 경로
             targetUrl = String.format("http://localhost:5173/oauth/error?message=%s", errorMessage);

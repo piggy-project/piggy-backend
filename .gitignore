@@ -63,3 +63,16 @@ redis/data/
 # Database backup files
 *.sql
 backup.sql
+# 서비스 계정 키 / 인증서 / 환경 파일
+*.pem
+*.p12
+*.jks
+*.key
+*-key.json
+*-credentials.json
+*service-account*.json
+piggy-*.json
+.env.*
+application-local.yml
+apllication-prod.yml
+docker-compose.override.yml
