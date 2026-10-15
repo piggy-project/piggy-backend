@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class SerpItemDto {
+    private String productId;  // SerpAPI 상품 ID
     private String source;     // 판매처 (Shopee, Lazada 등)
     private String title;      // 상품명
     private double price;      // 현지 통화 가격 (숫자)

@@ -25,6 +25,7 @@ public enum ErrorCode {
     SHOPPING_API_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "SHOPPING_API_ERROR", "쇼핑몰 검색 API 호출 중 문제가 발생했습니다."),
     CACHE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "CACHE_ERROR", "데이터 캐싱 처리 중 문제가 발생했습니다."),
     EMPTY_SEARCH_RESULT(HttpStatus.NOT_FOUND, "EMPTY_SEARCH_RESULT", "검색 결과가 존재하지 않습니다."),
+    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS", "요청이 너무 많습니다. 잠시 후 다시 시도해주세요."),
 
     // 커뮤니티 관련 에러 코드 추가
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "존재하지 않는 게시글입니다."),

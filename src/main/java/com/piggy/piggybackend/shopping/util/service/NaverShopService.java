@@ -1,66 +1,46 @@
 package com.piggy.piggybackend.shopping.util.service;
 
 import com.piggy.piggybackend.shopping.util.dto.NaverShopDto;
+import com.piggy.piggybackend.shopping.util.dto.SerpItemDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
+// 네이버 쇼핑 검색 API가 2026-07-31 종료되어 SerpAPI(Google Shopping 한국) 결과로 대체.
+// 프론트 호환을 위해 기존 NaverShopDto 형태로 매핑해서 반환
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class NaverShopService {
 
-    private static final String INTERNAL_API_URL = "https://search.shopping.naver.com/ns/v1/branch/products";
+    private final SerpShopService serpShopService;
 
     public NaverShopDto searchItems(String query) {
         try {
-            // 1. 타임아웃 방어 설정 (Connect 2s, Read 3s)
-            SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-            factory.setConnectTimeout(2000);
-            factory.setReadTimeout(3000);
-            RestTemplate restTemplate = new RestTemplate(factory);
+            List<SerpItemDto> items = serpShopService.getKoreanProducts(query);
 
-            // 2. 브라우저 위장 필수 헤더
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36");
-            headers.set("Referer", "https://search.shopping.naver.com/");
-            headers.set("Accept", "application/json, text/plain, */*");
-            headers.set("Accept-Language", "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7");
-            headers.set("sec-ch-ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"");
-            headers.set("sec-ch-ua-mobile", "?0");
-            headers.set("sec-ch-ua-platform", "\"Windows\"");
+            List<NaverShopDto.ProductData> data = items.stream()
+                    .map(item -> NaverShopDto.ProductData.builder()
+                            .id(item.getProductId())
+                            .productName(item.getTitle())
+                            .salePrice((int) item.getPrice())
+                            .mallName(item.getSource())
+                            .productUrl(NaverShopDto.ProductData.ProductUrl.builder()
+                                    .pcUrl(item.getLink())
+                                    .mobileUrl(item.getLink())
+                                    .build())
+                            .images(List.of(NaverShopDto.ProductData.ImageInfo.builder()
+                                    .imageUrl(item.getThumbnail())
+                                    .build()))
+                            .build())
+                    .toList();
 
-            // 3. Payload 파라미터 구성
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("query", query);
-            requestBody.put("pagingIndex", 1);
-            requestBody.put("pagingSize", 10);
-
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-
-            // 4. POST 요청 및 DTO 매핑
-            ResponseEntity<NaverShopDto> response = restTemplate.exchange(
-                    INTERNAL_API_URL,
-                    HttpMethod.POST,
-                    entity,
-                    NaverShopDto.class
-            );
-
-            return response.getBody();
+            return NaverShopDto.builder().data(data).build();
 
         } catch (Exception e) {
-            log.error("네이버 쇼핑 크롤링 처리 중 오류 - query: {}, error: {}", query, e.getMessage());
+            log.error("국내 쇼핑 검색 처리 중 오류 - query: {}, error: {}", query, e.getMessage());
             return null;
         }
     }
