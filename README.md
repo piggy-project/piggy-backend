@@ -3,7 +3,7 @@
 > 환율 기반 여행 유틸리티 서비스 **PIGGY** 의 백엔드 서버입니다.
 > 실시간 환율 · 환전 타이밍 · 가격 OCR 환산 · 해외 쇼핑 가격 비교 · AI 챗봇 · 커뮤니티를 하나의 앱에서 제공합니다.
 
-- Backend: https://github.com/piggy-project/piggy-backend
+- Backend: https://github.com/piggy-project/piggy-backend <br>
 - Frontend: https://github.com/piggy-project/piggy-frontendApp
 
 ---
@@ -12,19 +12,28 @@
 
 ### 프로젝트명 & 한 줄 설명
 
-| 항목 | 내용 |
-| --- | --- |
-| 프로젝트명 | PIGGY |
-| 한 줄 설명 | 해외여행·직구 사용자를 위해 실시간 환율, 환전 타이밍, 가격 OCR 환산, 해외 쇼핑 가격 비교, AI 챗봇, 커뮤니티를 한 앱에서 제공하는 환율 기반 여행 유틸리티 서비스 |
-| 플랫폼 | 모바일 앱(Android · iOS) + REST API 서버 |
+<table>
+  <thead>
+    <tr><th width="130">항목</th><th>내용</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>프로젝트명</td><td>PIGGY</td></tr>
+    <tr><td>한 줄 설명</td><td>해외여행·직구 사용자를 위해 실시간 환율, 환전 타이밍, 가격 OCR 환산, 해외 쇼핑 가격 비교, AI 챗봇, 커뮤니티를 한 앱에서 제공하는 환율 기반 여행 유틸리티 서비스</td></tr>
+    <tr><td>플랫폼</td><td>모바일 앱(Android · iOS) + REST API 서버</td></tr>
+  </tbody>
+</table>
 
 ### 개발 기간 및 인원
 
-| 항목 | 내용 |
-| --- | --- |
-| 개발 기간 | 2026.02 ~ 2026.06 |
-| 인원 | 총 2명 (프론트엔드 1명, 백엔드 1명) |
-| 본인 역할 | 풀스택 (백엔드 + 프론트엔드) |
+<table>
+  <thead>
+    <tr><th width="130">항목</th><th>내용</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>개발 기간</td><td>2026.02 ~ 2026.06</td></tr>
+    <tr><td>인원</td><td>총 2명 (프론트엔드 1명, 백엔드 1명)</td></tr>
+  </tbody>
+</table>
 
 ### 아키텍처 구조도
 
@@ -75,16 +84,21 @@ flowchart TB
 
 ### 핵심 기능
 
-| 기능 | 설명 | 핵심 기술 |
-| --- | --- | --- |
-| 실시간 환율 | 주요 9개 통화의 현재가 · 전일 대비 · 당일 고저가 · 시간대별 추이 · 기간별 이력 제공. 최근 90일 환율 대비 현재 환율의 백분위로 환전 적기 안내 | 외부 환율 API, Redis Hash, `@Scheduled` |
-| 환전 수수료 시뮬레이터 | 은행별(국민 · 신한 · 기업 · 토스 · 직접 입력) 수수료율과 우대율을 적용해 최종 수령 외화와 절약 금액 계산 | 정책 Enum, 실시간 환율 연동 |
-| AI 여행지 추천 · 챗봇 | 해시태그별 여행지를 매시간 추천하고, 앱 사용법 · 여행 · 환율 질문에 답변하며 후속 질문 추천 | Gemini API, Redis 캐시 |
-| 가격 OCR 스캔 | 가격표 사진에서 통화 기호와 금액을 인식해 실시간 환율로 원화 환산 | Google Cloud Vision, 정규식 파싱 |
-| 해외 쇼핑 가격 비교 | 네이버(국내)와 통화별 해외 쇼핑 API(Rakuten · eBay · SerpAPI) 가격을 환율 환산해 비교, 검색어 랭킹 기반 인기 상품 제공 | 다중 외부 API, Redis Sorted Set |
-| 환율 알림 (푸시) | 변동률 · 목표가 · 3개월 최저가 · 급등락 알림과 알림 내역 관리 | FCM, 스케줄러, Redis 쿨다운 |
-| 커뮤니티 | 게시판(자유 · 환율 · 여행), 댓글, 좋아요, 핫 게시글, 이미지 업로드, 내 활동 조회 | Redis, AWS S3 |
-| 회원 · 인증 | 이메일 가입(인증 메일), 카카오 · 구글 · 네이버 소셜 로그인, JWT 발급 · 재발급, 탈퇴 후 1개월 뒤 영구 삭제 | Spring Security, OAuth2, JWT |
+<table>
+  <thead>
+    <tr><th width="170">기능</th><th>설명</th><th width="200">핵심 기술</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>실시간 환율</td><td>주요 9개 통화의 현재가 · 전일 대비 · 당일 고저가 · 시간대별 추이 · 기간별 이력 제공. 최근 90일 환율 대비 현재 환율의 백분위로 환전 적기 안내</td><td>외부 환율 API, Redis Hash, <code>@Scheduled</code></td></tr>
+    <tr><td>환전 수수료 시뮬레이터</td><td>은행별(국민 · 신한 · 기업 · 토스 · 직접 입력) 수수료율과 우대율을 적용해 최종 수령 외화와 절약 금액 계산</td><td>정책 Enum, 실시간 환율 연동</td></tr>
+    <tr><td>AI 여행지 추천 · 챗봇</td><td>해시태그별 여행지를 매시간 추천하고, 앱 사용법 · 여행 · 환율 질문에 답변하며 후속 질문 추천</td><td>Gemini API, Redis 캐시</td></tr>
+    <tr><td>가격 OCR 스캔</td><td>가격표 사진에서 통화 기호와 금액을 인식해 실시간 환율로 원화 환산</td><td>Google Cloud Vision, 정규식 파싱</td></tr>
+    <tr><td>해외 쇼핑 가격 비교</td><td>네이버(국내)와 통화별 해외 쇼핑 API(Rakuten · eBay · SerpAPI) 가격을 환율 환산해 비교, 검색어 랭킹 기반 인기 상품 제공</td><td>다중 외부 API, Redis Sorted Set</td></tr>
+    <tr><td>환율 알림 (푸시)</td><td>변동률 · 목표가 · 3개월 최저가 · 급등락 알림과 알림 내역 관리</td><td>FCM, 스케줄러, Redis 쿨다운</td></tr>
+    <tr><td>커뮤니티</td><td>게시판(자유 · 환율 · 여행), 댓글, 좋아요, 핫 게시글, 이미지 업로드, 내 활동 조회</td><td>Redis, AWS S3</td></tr>
+    <tr><td>회원 · 인증</td><td>이메일 가입(인증 메일), 카카오 · 구글 · 네이버 소셜 로그인, JWT 발급 · 재발급, 탈퇴 후 1개월 뒤 영구 삭제</td><td>Spring Security, OAuth2, JWT</td></tr>
+  </tbody>
+</table>
 
 ---
 
