@@ -1,7 +1,7 @@
 # PIGGY Backend
 
-> 환율 기반 여행 유틸리티 서비스 **PIGGY** 의 백엔드 서버입니다.
-> 실시간 환율 · 환전 타이밍 · 가격 OCR 환산 · 해외 쇼핑 가격 비교 · AI 챗봇 · 커뮤니티를 하나의 앱에서 제공합니다.
+> 환율 기반 여행 유틸리티 서비스 **PIGGY** 의 백엔드 서버입니다. <br>
+> 실시간 환율 · 환전 타이밍 · 해외 쇼핑 가격 비교 · 커뮤니티를 하나의 앱에서 제공합니다.
 
 - Backend: https://github.com/piggy-project/piggy-backend <br>
 - Frontend: https://github.com/piggy-project/piggy-frontendApp
@@ -18,7 +18,7 @@
   </thead>
   <tbody>
     <tr><td>프로젝트명</td><td>PIGGY</td></tr>
-    <tr><td>한 줄 설명</td><td>해외여행·직구 사용자를 위해 실시간 환율, 환전 타이밍, 가격 OCR 환산, 해외 쇼핑 가격 비교, AI 챗봇, 커뮤니티를 한 앱에서 제공하는 환율 기반 여행 유틸리티 서비스</td></tr>
+    <tr><td>한 줄 설명</td><td>실시간 환율, 해외 쇼핑 가격 비교, 커뮤니티를 한 앱에서 제공하는 환율 기반 여행 유틸리티 서비스</td></tr>
     <tr><td>플랫폼</td><td>모바일 앱(Android · iOS) + REST API 서버</td></tr>
   </tbody>
 </table>
