@@ -79,7 +79,8 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                     path, accessToken, refreshToken);
         }
 
-        System.out.println("Redirecting to (" + path + "): " + targetUrl);
+        // 보안: targetUrl에는 Access/Refresh Token이 포함되어 있으므로 로그에 남기지 않는다
+        System.out.println("OAuth2 로그인 성공, 리다이렉트: " + path);
         response.sendRedirect(targetUrl);
     }
 

@@ -39,11 +39,11 @@ public class FcmService {
                 // 만료된 토큰이면 DB에서 삭제
                 if (!isValid) {
                     fcmTokenRepository.delete(fcmToken);
-                    log.info("[FCM 좀비 토큰 삭제] User: {}, token: {}", user.getEmail(), fcmToken.getToken());
+                    log.info("[FCM 좀비 토큰 삭제] User: {}, token: {}", user.getEmail(), mask(fcmToken.getToken()));
                 }
             } catch (Exception e) {
                 log.error("[FCM 개별 발송 실패] User: {}, token: {}, error: {}",
-                        user.getEmail(), fcmToken.getToken(), e.getMessage());
+                        user.getEmail(), mask(fcmToken.getToken()), e.getMessage());
             }
         }
     }
@@ -72,12 +72,18 @@ public class FcmService {
         } catch (FirebaseMessagingException e) {
             // 만료된 토큰 → 삭제 필요 신호
             if (e.getMessagingErrorCode() == MessagingErrorCode.UNREGISTERED) {
-                log.warn("[FCM] 만료된 토큰 감지: {}", token);
+                log.warn("[FCM] 만료된 토큰 감지: {}", mask(token));
                 return false;
             }
             // 네트워크 오류 등 다른 이유 → 토큰은 유효하므로 삭제 안 함
             log.error("[FCM] 발송 에러: {}", e.getMessage());
             return true;
         }
+    }
+
+    // 로그에 토큰 전체가 남지 않도록 끝 6자리만 표시
+    private String mask(String token) {
+        if (token == null || token.length() <= 6) return "******";
+        return "..." + token.substring(token.length() - 6);
     }
 }
