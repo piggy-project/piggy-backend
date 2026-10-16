@@ -73,7 +73,7 @@ flowchart TB
 | Language | Java 21 |
 | Backend | Spring Boot 3.2, Spring Security, JPA, OAuth2 Client, JWT, Swagger |
 | Database / Cache | MySQL 8.0, Redis (Hash · Sorted Set · TTL 캐시) |
-| 외부 연동 | 환율 API, Gemini 2.5 Flash, Google Cloud Vision, 네이버 쇼핑 · Rakuten · eBay · SerpAPI, Firebase FCM, AWS S3, SMTP 메일 |
+| 외부 연동 | 환율 API, Gemini 2.5 Flash, Google Cloud Vision, Rakuten · eBay · SerpAPI(Google Shopping), Firebase FCM, AWS S3, SMTP 메일 |
 | Infra / DevOps | Docker, Docker Compose, GitHub Actions(CI/CD), AWS EC2 |
 | Monitoring | Prometheus, Grafana, k6 |
 | Frontend | React Native, Expo Router, TypeScript, React Query, Axios |
@@ -92,10 +92,21 @@ flowchart TB
     <tr><td>실시간 환율</td><td>주요 9개 통화의 현재가 · 전일 대비 · 당일 고저가 · 시간대별 추이 · 기간별 이력 제공. 최근 90일 환율 대비 현재 환율의 백분위로 환전 적기 안내</td><td>외부 환율 API, Redis Hash, <code>@Scheduled</code></td></tr>
     <tr><td>AI 여행지 추천 · 챗봇</td><td>해시태그별 여행지를 매시간 추천하고, 앱 사용법 · 여행 · 환율 질문에 답변하며 후속 질문 추천</td><td>Gemini API, Redis 캐시</td></tr>
     <tr><td>가격 OCR 스캔</td><td>가격표 사진에서 통화 기호와 금액을 인식해 실시간 환율로 원화 환산</td><td>Google Cloud Vision, 정규식 파싱</td></tr>
-    <tr><td>해외 쇼핑 가격 비교</td><td>네이버(국내)와 통화별 해외 쇼핑 API(Rakuten · eBay · SerpAPI) 가격을 환율 환산해 비교, 검색어 랭킹 기반 인기 상품 제공</td><td>다중 외부 API, Redis Sorted Set</td></tr>
+    <tr><td>해외 쇼핑 가격 비교</td><td>국내 최저가(SerpAPI 한국 검색)와 통화별 해외 쇼핑 API(Rakuten · eBay · SerpAPI) 가격을 환율 환산해 비교, 검색어 랭킹 기반 인기 상품 제공</td><td>다중 외부 API, Redis Sorted Set</td></tr>
     <tr><td>환율 알림 (푸시)</td><td>변동률 · 목표가 · 3개월 최저가 · 급등락 알림과 알림 내역 관리</td><td>FCM, 스케줄러, Redis 쿨다운</td></tr>
     <tr><td>커뮤니티</td><td>게시판(자유 · 환율 · 여행), 댓글, 좋아요, 핫 게시글, 이미지 업로드, 내 활동 조회</td><td>Redis, AWS S3</td></tr>
     <tr><td>회원 · 인증</td><td>이메일 가입(인증 메일), 카카오 · 구글 · 네이버 소셜 로그인, JWT 발급 · 재발급, 탈퇴 후 1개월 뒤 영구 삭제</td><td>Spring Security, OAuth2, JWT</td></tr>
+  </tbody>
+</table>
+
+### 실행 화면
+
+<table>
+  <tbody>
+    <tr><td align="center"><img src="https://github.com/user-attachments/assets/cb9c2bd0-70f0-476c-a9cb-040dbdeaf4f2" width="200" alt="메인 화면"></td><td align="center"><img src="https://github.com/user-attachments/assets/2cb9b9e1-9630-49c8-bc9f-084a23b73d1c" width="200" alt="환율 탭"></td><td align="center"><img src="https://github.com/user-attachments/assets/e885a6ec-1daa-4800-93b3-76c0454c8072" width="200" alt="환율 상세"></td><td align="center"><img src="https://github.com/user-attachments/assets/3596ee5a-088e-482b-a021-17327658d298" width="200" alt="환율 알림 설정"></td></tr>
+    <tr><td align="center">메인 화면</td><td align="center">환율 탭</td><td align="center">환율 상세</td><td align="center">환율 알림 설정</td></tr>
+    <tr><td align="center"><img src="https://github.com/user-attachments/assets/b7d98c5d-7cfd-4730-8939-8da90ec2bc9b" width="200" alt="알림함"></td><td align="center"><img src="https://github.com/user-attachments/assets/9173c42b-8f90-4bb4-b22b-e75e7d93bd28" width="200" alt="쇼핑 가격 비교"></td><td align="center"><img src="https://github.com/user-attachments/assets/5b1d5533-6309-4ff4-9be4-986747ee265b" width="200" alt="커뮤니티"></td></tr>
+    <tr><td align="center">알림함</td><td align="center">쇼핑 가격 비교</td><td align="center">커뮤니티</td></tr>
   </tbody>
 </table>
 
