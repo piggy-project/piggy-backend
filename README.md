@@ -103,9 +103,10 @@ flowchart TB
 
 <table>
   <tbody>
-    <tr><td align="center"><img src="https://github.com/user-attachments/assets/cb9c2bd0-70f0-476c-a9cb-040dbdeaf4f2" width="200" alt="메인 화면"></td><td align="center"><img src="https://github.com/user-attachments/assets/2cb9b9e1-9630-49c8-bc9f-084a23b73d1c" width="200" alt="환율 탭"></td><td align="center"><img src="https://github.com/user-attachments/assets/e885a6ec-1daa-4800-93b3-76c0454c8072" width="200" alt="환율 상세"></td><td align="center"><img src="https://github.com/user-attachments/assets/3596ee5a-088e-482b-a021-17327658d298" width="200" alt="환율 알림 설정"></td></tr>
+    <tr><td align="center"><img src="https://github.com/user-attachments/assets/cb9c2bd0-70f0-476c-a9cb-040dbdeaf4f2" width="200" alt="메인 화면"></td><td align="center"><img alt="환율 탭" src="https://github.com/user-attachments/assets/270b301d-83c7-4991-9f73-6a0ac5231045" width="200"/></td><td align="center"><img src="https://github.com/user-attachments/assets/e885a6ec-1daa-4800-93b3-76c0454c8072" width="200" alt="환율 상세"></td><td align="center"><img src="https://github.com/user-attachments/assets/3596ee5a-088e-482b-a021-17327658d298" width="200" alt="환율 알림 설정"></td></tr>
     <tr><td align="center">메인 화면</td><td align="center">환율 탭</td><td align="center">환율 상세</td><td align="center">환율 알림 설정</td></tr>
-    <tr><td align="center"><img src="https://github.com/user-attachments/assets/b7d98c5d-7cfd-4730-8939-8da90ec2bc9b" width="200" alt="알림함"></td><td align="center"><img src="https://github.com/user-attachments/assets/9173c42b-8f90-4bb4-b22b-e75e7d93bd28" width="200" alt="쇼핑 가격 비교"></td><td align="center"><img src="https://github.com/user-attachments/assets/5b1d5533-6309-4ff4-9be4-986747ee265b" width="200" alt="커뮤니티"></td></tr>
+    <tr><td align="center"><img src="https://github.com/user-attachments/assets/b7d98c5d-7cfd-4730-8939-8da90ec2bc9b" width="200" alt="알림함"></td><td align="center"><img width="200" alt="쇼핑 가격 비교" src="https://github.com/user-attachments/assets/0167faa7-aa3e-4181-9f2f-d4c2862ecfcc" />
+</td><td align="center"><img src="https://github.com/user-attachments/assets/5b1d5533-6309-4ff4-9be4-986747ee265b" width="200" alt="커뮤니티"></td></tr>
     <tr><td align="center">알림함</td><td align="center">쇼핑 가격 비교</td><td align="center">커뮤니티</td></tr>
   </tbody>
 </table>
