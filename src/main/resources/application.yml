@@ -115,7 +115,7 @@ rakuten:
   api:
     application-id: ${RAKUTEN_APP_ID}
     access-key: ${RAKUTEN_ACCESS_KEY}
-    url: https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601
+    url: https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20260701
 
 jwt:
   secret-key: ${JWT_SECRET_KEY}
