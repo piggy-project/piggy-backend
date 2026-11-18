@@ -31,6 +31,7 @@ public class ComparisonService {
     private final ObjectMapper objectMapper;
     private final SerpShopService serpShopService;
     private final EbayShopService ebayShopService;
+    private final KeywordTranslationService keywordTranslationService;
 
     private static final String CACHE_KEY_PREFIX = "popular_items_cache:";
     private static final String SEARCH_CACHE_PREFIX = "search_results_cache:";
@@ -52,14 +53,17 @@ public class ComparisonService {
             RakutenItemDto rakutenResult = null;
             List<SerpItemDto> serpResults = null;
 
+            // 해외 쇼핑몰은 한글 검색어에 결과를 주지 않으므로 현지 언어로 바꿔서 검색한다
+            String marketQuery = keywordTranslationService.toMarketLanguage(query, currencyCode);
+
             if ("JPY".equals(currencyCode)) {
-                rakutenResult = rakutenService.searchItems(query);
+                rakutenResult = rakutenService.searchItems(marketQuery);
             }
             else if (List.of("USD", "EUR", "GBP", "AUD").contains(currencyCode)) {
-                serpResults = ebayShopService.getEbayProducts(query, currencyCode);
+                serpResults = ebayShopService.getEbayProducts(marketQuery, currencyCode);
             }
             else if (List.of("THB", "PHP", "VND", "CNY").contains(currencyCode)) {
-                serpResults = serpShopService.getRegionalProducts(query, currencyCode);
+                serpResults = serpShopService.getRegionalProducts(marketQuery, currencyCode);
             }
 
             var exchangeDetail = exchangeRateService.getExchangeDetail(currencyCode);
@@ -125,9 +129,10 @@ public class ComparisonService {
             if (exchangeDetail == null) return;
             double rate = exchangeDetail.getCurrentRate();
 
-            List<UnifiedItemDto> items = topKeywords.stream().map(keyword -> {
+            List<UnifiedItemDto> items = topKeywords.stream().map(rawKeyword -> {
                 try {
                     Thread.sleep(500);
+                    String keyword = keywordTranslationService.toMarketLanguage(rawKeyword, currencyCode);
 
                     if ("JPY".equals(currencyCode)) {
                         var res = rakutenService.searchItems(keyword);

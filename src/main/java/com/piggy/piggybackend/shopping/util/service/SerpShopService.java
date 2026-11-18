@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -86,10 +88,11 @@ public class SerpShopService {
         if (hl != null) {
             builder.queryParam("hl", hl);
         }
-        String url = builder.toUriString();
+        // String으로 넘기면 RestTemplate이 한 번 더 인코딩해서 한글 검색어가 깨진다 (%ED -> %25ED)
+        URI uri = builder.encode(StandardCharsets.UTF_8).build().toUri();
 
         try {
-            JsonNode root = restTemplate.getForObject(url, JsonNode.class);
+            JsonNode root = restTemplate.getForObject(uri, JsonNode.class);
             if (root == null || !root.has("shopping_results")) {
                 log.warn("[SERP] 검색 결과가 없습니다. (gl: {})", gl);
                 return results;

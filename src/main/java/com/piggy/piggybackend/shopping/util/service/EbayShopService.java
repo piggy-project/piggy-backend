@@ -13,6 +13,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -89,10 +91,13 @@ public class EbayShopService {
             String token = getAccessToken();
             String marketplaceId = "USD".equals(currencyCode) ? "EBAY_US" : "EBAY_DE";
 
-            String url = UriComponentsBuilder.fromHttpUrl("https://api.ebay.com/buy/browse/v1/item_summary/search")
+            // String으로 넘기면 RestTemplate이 한 번 더 인코딩하므로 URI로 만들어 전달한다
+            URI url = UriComponentsBuilder.fromHttpUrl("https://api.ebay.com/buy/browse/v1/item_summary/search")
                     .queryParam("q", query)
                     .queryParam("limit", 10)
-                    .toUriString();
+                    .encode(StandardCharsets.UTF_8)
+                    .build()
+                    .toUri();
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + token);

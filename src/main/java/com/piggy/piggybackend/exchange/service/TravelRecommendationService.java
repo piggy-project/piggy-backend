@@ -20,6 +20,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,17 @@ public class TravelRecommendationService {
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
     private static final List<String> TARGET_CURRENCIES = List.of(
             "JPY", "THB", "VND", "PHP", "USD", "EUR", "CNY", "AUD", "GBP"
+    );
+
+    private static final String WIKIPEDIA_SUMMARY_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/";
+    private static final String DEFAULT_IMAGE =
+            "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800";
+    // 위키백과에서 사진을 못 찾았을 때 쓰는 나라별 사진
+    private static final Map<String, String> FALLBACK_IMAGES = Map.of(
+            "JPY", "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800",
+            "VND", "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800",
+            "THB", "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=800",
+            "EUR", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800"
     );
 
     @Value("${gemini.api.key}")
@@ -128,7 +140,7 @@ public class TravelRecommendationService {
                     "location": "도시명 (예: 하노이)",
                     "reason": "추천 이유 (한 문장)",
                     "currencyCode": "통화코드 (예: VND)",
-                    "imageKeyword": "여행지를 나타내는 영어 키워드 2개 (예: hanoi,landscape)"
+                    "imageKeyword": "도시의 영어 이름 하나, 영어 위키백과 문서 제목 그대로 (예: Hanoi, Da Nang)"
                   }
                 ]
                 """, rateInfo);
@@ -167,9 +179,8 @@ public class TravelRecommendationService {
 
             ExchangeDetailResponseDto detail = rateMap.get(code);
 
-            // ⭐ 서버에서 URL 강제 조립 (죽은 주소 source.unsplash 차단)
-            String encodedKeyword = URLEncoder.encode(keyword.replace(" ", ""), StandardCharsets.UTF_8);
-            String finalImageUrl = "https://loremflickr.com/800/450/" + encodedKeyword;
+            // 이미지 주소는 서버에서 만든다 (Gemini가 지어낸 주소, 죽은 이미지 서비스 차단)
+            String finalImageUrl = resolveImageUrl(keyword, code);
 
             return TravelRecommendationResponseDto.builder()
                     .destination(item.path("destination").asText())
@@ -182,5 +193,41 @@ public class TravelRecommendationService {
                     .imageUrl(finalImageUrl) // 서버에서 만든 '진짜' 주소 삽입
                     .build();
         }).toList();
+    }
+
+    /**
+     * 도시 이름으로 영어 위키백과의 대표 사진을 찾는다.
+     * 찾지 못하면 통화(나라)별로 정해 둔 사진을 쓴다.
+     */
+    private String resolveImageUrl(String keyword, String currencyCode) {
+        try {
+            // "hanoi,landscape"처럼 여러 단어가 오면 첫 단어(도시명)만 쓴다
+            String title = keyword.split(",")[0].trim().replace(' ', '_');
+            if (!title.isEmpty()) {
+                String encodedTitle = URLEncoder.encode(title, StandardCharsets.UTF_8).replace("+", "%20");
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(WIKIPEDIA_SUMMARY_URL + encodedTitle))
+                        .timeout(Duration.ofSeconds(5))
+                        .header("User-Agent", "PiggyTravelApp/1.0 (graduation project)")
+                        .header("Accept", "application/json")
+                        .GET()
+                        .build();
+
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                if (response.statusCode() == 200) {
+                    String thumbnail = objectMapper.readTree(response.body())
+                            .path("thumbnail").path("source").asText("");
+                    if (!thumbnail.isEmpty()) {
+                        // 위키미디어가 허용하는 표준 폭(960px)으로 바꾸고 추적용 쿼리는 뗀다
+                        String withoutQuery = thumbnail.split("\\?")[0];
+                        return withoutQuery.replaceFirst("/\\d+px-", "/960px-");
+                    }
+                }
+                log.warn("[AI 여행 추천] 위키백과 이미지 없음 - keyword: {}, status: {}", keyword, response.statusCode());
+            }
+        } catch (Exception e) {
+            log.warn("[AI 여행 추천] 이미지 조회 실패 - keyword: {}, error: {}", keyword, e.getMessage());
+        }
+        return FALLBACK_IMAGES.getOrDefault(currencyCode, DEFAULT_IMAGE);
     }
 }
