@@ -24,6 +24,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -57,8 +58,17 @@ public class TravelRecommendationService {
             "EUR", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800"
     );
 
+    private static final String REDIS_IMAGE_PREFIX = "travel:image:";
+    private static final String IMAGE_USER_AGENT = "PiggyTravelApp/1.0 (graduation project)";
+    private static final int MAX_CACHED_IMAGES = 60;
+    private final Map<String, TravelImage> imageCache = new ConcurrentHashMap<>();
+
     @Value("${gemini.api.key}")
     private String geminiApiKey;
+
+    // 앱이 접근하는 서버 주소 (사진 주소를 만들 때 사용)
+    @Value("${app.public-url:https://piggys.mooo.com}")
+    private String publicUrl;
 
     public void clearCache() {
         redisTemplate.delete(REDIS_KEY);
@@ -196,7 +206,55 @@ public class TravelRecommendationService {
     }
 
     /**
-     * 도시 이름으로 영어 위키백과의 대표 사진을 찾는다.
+     * 앱에 내려준 여행지 사진을 서버가 대신 받아 준다.
+     * 위키미디어는 안드로이드 앱의 기본 요청(okhttp)을 403으로 막기 때문에 앱이 직접 받지 않는다.
+     * Redis에 등록된 사진만 내려주므로 임의의 주소를 받아 오는 통로로는 쓸 수 없다.
+     */
+    public TravelImage loadImage(String slug) {
+        if (slug == null || !slug.matches("[a-z0-9-]{1,80}")) {
+            return null;
+        }
+        TravelImage cached = imageCache.get(slug);
+        if (cached != null) {
+            return cached;
+        }
+        try {
+            String source = redisTemplate.opsForValue().get(REDIS_IMAGE_PREFIX + slug);
+            if (source == null) {
+                return null;
+            }
+            URI uri = URI.create(source);
+            if (uri.getHost() == null || !uri.getHost().endsWith(".wikimedia.org")) {
+                return null;
+            }
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .timeout(Duration.ofSeconds(10))
+                    .header("User-Agent", IMAGE_USER_AGENT)
+                    .GET()
+                    .build();
+            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() != 200 || response.body().length == 0) {
+                log.warn("[AI 여행 추천] 사진 다운로드 실패 - slug: {}, status: {}", slug, response.statusCode());
+                return null;
+            }
+            String contentType = source.toLowerCase().endsWith(".png") ? "image/png" : "image/jpeg";
+            TravelImage image = new TravelImage(response.body(), contentType);
+            if (imageCache.size() >= MAX_CACHED_IMAGES) {
+                imageCache.clear();
+            }
+            imageCache.put(slug, image);
+            return image;
+        } catch (Exception e) {
+            log.warn("[AI 여행 추천] 사진 다운로드 에러 - slug: {}, error: {}", slug, e.getMessage());
+            return null;
+        }
+    }
+
+    public record TravelImage(byte[] bytes, String contentType) {}
+
+    /**
+     * 도시 이름으로 영어 위키백과의 대표 사진을 찾아, 서버를 거쳐 받는 주소로 돌려준다.
      * 찾지 못하면 통화(나라)별로 정해 둔 사진을 쓴다.
      */
     private String resolveImageUrl(String keyword, String currencyCode) {
@@ -208,7 +266,7 @@ public class TravelRecommendationService {
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(WIKIPEDIA_SUMMARY_URL + encodedTitle))
                         .timeout(Duration.ofSeconds(5))
-                        .header("User-Agent", "PiggyTravelApp/1.0 (graduation project)")
+                        .header("User-Agent", IMAGE_USER_AGENT)
                         .header("Accept", "application/json")
                         .GET()
                         .build();
@@ -220,7 +278,13 @@ public class TravelRecommendationService {
                     if (!thumbnail.isEmpty()) {
                         // 위키미디어가 허용하는 표준 폭(960px)으로 바꾸고 추적용 쿼리는 뗀다
                         String withoutQuery = thumbnail.split("\\?")[0];
-                        return withoutQuery.replaceFirst("/\\d+px-", "/960px-");
+                        String source = withoutQuery.replaceFirst("/\\d+px-", "/960px-");
+
+                        String slug = title.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
+                        if (!slug.isEmpty() && slug.length() <= 80) {
+                            redisTemplate.opsForValue().set(REDIS_IMAGE_PREFIX + slug, source, 7, TimeUnit.DAYS);
+                            return publicUrl + "/api/exchange/travel-image/" + slug;
+                        }
                     }
                 }
                 log.warn("[AI 여행 추천] 위키백과 이미지 없음 - keyword: {}, status: {}", keyword, response.statusCode());
